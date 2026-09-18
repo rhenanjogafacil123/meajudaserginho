@@ -259,7 +259,7 @@ function App() {
     <header className="topbar">
       <div className="topbar-row">
         {back ? (
-          <button className="icon-button" onClick={back} aria-label="Voltar">
+          <button type="button" className="icon-button" onClick={back} aria-label="Voltar">
             <ArrowLeft size={20} />
           </button>
         ) : (
@@ -276,18 +276,18 @@ function App() {
 
   const BottomNav = () => (
     <nav className="bottom-nav">
-      <button className={screen === "home" ? "active" : ""} onClick={() => setScreen("home")}>
+      <button type="button" className={screen === "home" ? "active" : ""} onClick={() => setScreen("home")}>
         <Home size={20} />
         <span>Início</span>
       </button>
-      <button className={screen === "calls" ? "active" : ""} onClick={() => setScreen("calls")}>
+      <button type="button" className={screen === "calls" ? "active" : ""} onClick={() => setScreen("calls")}>
         <ClipboardList size={20} />
         <span>Chamados</span>
       </button>
-      <button className="new-button" onClick={() => startNew()}>
+      <button type="button" className="new-button" onClick={() => startNew()}>
         <Plus size={25} />
       </button>
-      <button className={screen === "notices" ? "active" : ""} onClick={() => setScreen("notices")}>
+      <button type="button" className={screen === "notices" ? "active" : ""} onClick={() => setScreen("notices")}>
         <Bell size={20} />
         <span>Avisos</span>
       </button>
@@ -302,7 +302,7 @@ function App() {
           <span className="eyebrow">Cuidar do bairro começa por aqui</span>
           <h1>Como podemos ajudar seu bairro hoje?</h1>
           <p>Registre um problema em poucos passos e acompanhe o andamento pelo protocolo.</p>
-          <button className="primary hero-action" onClick={() => startNew()}>
+          <button type="button" className="primary hero-action" onClick={() => startNew()}>
             <Camera size={20} />
             Registrar um problema
           </button>
@@ -317,7 +317,7 @@ function App() {
           </div>
           <div className="category-grid">
             {categories.map(({ label, icon: Icon }) => (
-              <button key={label} className="category-card" onClick={() => startNew(label)}>
+              <button type="button" key={label} className="category-card" onClick={() => startNew(label)}>
                 <span className="category-icon"><Icon size={21} /></span>
                 <span>{label}</span>
               </button>
@@ -331,11 +331,11 @@ function App() {
               <small>Acompanhamento</small>
               <h2>Seus últimos chamados</h2>
             </div>
-            <button className="text-button" onClick={() => setScreen("calls")}>Ver todos</button>
+            <button type="button" className="text-button" onClick={() => setScreen("calls")}>Ver todos</button>
           </div>
           <div className="stack">
             {calls.slice(0, 2).map((item) => (
-              <button className="call-card" key={item.id} onClick={() => openCall(item)}>
+              <button type="button" className="call-card" key={item.id} onClick={() => openCall(item)}>
                 <div className="call-main">
                   <span className="call-icon"><CircleDot size={18} /></span>
                   <div>
@@ -376,7 +376,7 @@ function App() {
             <p className="page-subtitle">Escolha a opção que melhor descreve o problema.</p>
             <div className="category-grid large">
               {categories.map(({ label, icon: Icon }) => (
-                <button
+                <button type="button"
                   key={label}
                   className={"category-card " + (form.category === label ? "selected" : "")}
                   onClick={() =>
@@ -411,7 +411,7 @@ function App() {
               </div>
             )}
 
-            <button
+            <button type="button"
               className="primary full"
               disabled={!form.category || (form.category === "Outro" && !form.otherDetails.trim())}
               onClick={() => setStep(2)}
@@ -434,7 +434,7 @@ function App() {
                 ) : (
                   <img src={form.mediaPreview} alt="Prévia selecionada" />
                 )}
-                <button className="remove-media" onClick={() => setForm({ ...form, mediaName: "", mediaType: "", mediaPreview: "" })}>
+                <button type="button" className="remove-media" onClick={() => setForm({ ...form, mediaName: "", mediaType: "", mediaPreview: "" })}>
                   <X size={18} />
                 </button>
                 <div className="media-caption">
@@ -451,15 +451,15 @@ function App() {
             )}
 
             <div className="media-actions">
-              <button onClick={() => photoInput.current?.click()}><Camera size={19} /> Tirar foto</button>
-              <button onClick={() => videoInput.current?.click()}><Video size={19} /> Gravar vídeo</button>
-              <button onClick={() => galleryInput.current?.click()}><Upload size={19} /> Escolher da galeria</button>
+              <button type="button" onClick={() => photoInput.current?.click()}><Camera size={19} /> Tirar foto</button>
+              <button type="button" onClick={() => videoInput.current?.click()}><Video size={19} /> Gravar vídeo</button>
+              <button type="button" onClick={() => galleryInput.current?.click()}><Upload size={19} /> Escolher da galeria</button>
             </div>
             <input ref={photoInput} hidden type="file" accept="image/*" capture="environment" onChange={(e) => handleFile(e.target.files?.[0])} />
             <input ref={videoInput} hidden type="file" accept="video/*" capture="environment" onChange={(e) => handleFile(e.target.files?.[0])} />
             <input ref={galleryInput} hidden type="file" accept="image/*,video/*" onChange={(e) => handleFile(e.target.files?.[0])} />
 
-            <button className="primary full" onClick={() => setStep(3)}>
+            <button type="button" className="primary full" onClick={() => setStep(3)}>
               Continuar <ChevronRight size={19} />
             </button>
           </section>
@@ -471,7 +471,7 @@ function App() {
             <h1 className="page-title">Onde fica?</h1>
             <p className="page-subtitle">Use sua localização ou informe o endereço manualmente.</p>
 
-            <button className="location-button" onClick={requestLocation} disabled={locating}>
+            <button type="button" className="location-button" onClick={requestLocation} disabled={locating}>
               <LocateFixed size={21} />
               <div>
                 <strong>{locating ? "Identificando localização..." : "Usar minha localização"}</strong>
@@ -516,7 +516,7 @@ function App() {
               />
             </label>
 
-            <button
+            <button type="button"
               className="primary full"
               disabled={!form.coordinates && !form.address.trim()}
               onClick={() => setStep(4)}
@@ -561,7 +561,7 @@ function App() {
               <SummaryRow label="Mídia" value={form.mediaName || "Sem mídia"} />
             </div>
 
-            <button className="primary full send" onClick={submitCall}>
+            <button type="button" className="primary full send" onClick={submitCall}>
               <Send size={19} /> Enviar chamado
             </button>
           </section>
@@ -584,14 +584,14 @@ function App() {
           </div>
           <div className="filter-row">
             {(["Todos", ...statusOrder] as const).map((item) => (
-              <button key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}>
+              <button type="button" key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}>
                 {item}
               </button>
             ))}
           </div>
           <div className="stack">
             {filtered.map((item) => (
-              <button className="call-card vertical" key={item.id} onClick={() => openCall(item)}>
+              <button type="button" className="call-card vertical" key={item.id} onClick={() => openCall(item)}>
                 <div className="call-card-top">
                   <div className="call-main">
                     <span className="call-icon"><CircleDot size={18} /></span>
@@ -703,10 +703,10 @@ function App() {
         <small>Seu protocolo</small>
         <strong>{latestProtocol}</strong>
       </div>
-      <button className="primary full" onClick={() => selectedCall && openCall(selectedCall)}>
+      <button type="button" className="primary full" onClick={() => selectedCall && openCall(selectedCall)}>
         <ClipboardList size={19} /> Acompanhar chamado
       </button>
-      <button className="secondary full" onClick={() => setScreen("home")}>Voltar ao início</button>
+      <button type="button" className="secondary full" onClick={() => setScreen("home")}>Voltar ao início</button>
     </main>
   );
 
