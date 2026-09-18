@@ -35,12 +35,7 @@ type CallItem = {
   protocol: string;
   category: string;
   address: string;
-  number: string;
-  complement: string;
   neighborhood: string;
-  cep: string;
-  city: string;
-  state: string;
   description: string;
   reference?: string;
   status: Status;
@@ -55,7 +50,12 @@ type FormState = {
   category: string;
   otherDetails: string;
   address: string;
+  number: string;
+  complement: string;
   neighborhood: string;
+  cep: string;
+  city: string;
+  state: string;
   description: string;
   reference: string;
   mediaName: string;
