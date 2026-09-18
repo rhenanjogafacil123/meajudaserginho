@@ -234,89 +234,119 @@ function App() {
     }
 
     setLocating(true);
-    setLocationMessage("Solicitando a localização exata do aparelho...");
+    setLocationMessage("Buscando uma localização mais precisa...");
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        const accuracy = Math.round(position.coords.accuracy);
+    let bestPosition: GeolocationPosition | null = null;
+    let finished = false;
+    let watchId = -1;
 
-        setForm((current) => ({
-          ...current,
-          coordinates: { lat, lng }
-        }));
-        setLocationMessage("Coordenadas encontradas. Identificando o endereço...");
+    const normalizeAddressPart = (value: string) =>
+      value
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLocaleLowerCase("pt-BR")
+        .replace(/\b(rua|r\.?|avenida|av\.?|estrada|travessa|tv\.?)\b/g, "")
+        .replace(/[^a-z0-9]/g, "");
 
-        try {
-          const reverseResponse = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&zoom=18&addressdetails=1&accept-language=pt-BR`
-          );
+    const stopWatching = () => {
+      if (watchId >= 0) navigator.geolocation.clearWatch(watchId);
+    };
 
-          if (!reverseResponse.ok) {
-            throw new Error("Falha no serviço de endereço.");
-          }
+    const resolveAddress = async (position: GeolocationPosition) => {
+      if (finished) return;
+      finished = true;
+      stopWatching();
 
-          const reverse = await reverseResponse.json();
-          const address = reverse.address || {};
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      const accuracy = Math.round(position.coords.accuracy);
 
-          let street =
-            address.road ||
-            address.pedestrian ||
-            address.residential ||
-            address.footway ||
-            address.path ||
-            address.cycleway ||
-            "";
+      setForm((current) => ({
+        ...current,
+        coordinates: { lat, lng }
+      }));
+      setLocationMessage(
+        `Melhor localização encontrada (~${accuracy} m). Identificando o endereço...`
+      );
 
-          let number = address.house_number || "";
-          let neighborhood =
-            address.suburb ||
-            address.neighbourhood ||
-            address.quarter ||
-            address.borough ||
-            address.city_district ||
-            "";
+      try {
+        const reverseResponse = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&zoom=18&addressdetails=1&accept-language=pt-BR`
+        );
 
-          let city =
-            address.city ||
-            address.town ||
-            address.municipality ||
-            address.village ||
-            "";
+        if (!reverseResponse.ok) {
+          throw new Error("Falha no serviço de endereço.");
+        }
 
-          let state =
-            String(address["ISO3166-2-lvl4"] || address["ISO3166-2-lvl6"] || "")
-              .split("-")
-              .pop() || "";
+        const reverse = await reverseResponse.json();
+        const address = reverse.address || {};
 
-          let cep = address.postcode || "";
+        let street =
+          address.road ||
+          address.pedestrian ||
+          address.residential ||
+          address.footway ||
+          address.path ||
+          address.cycleway ||
+          "";
 
-          const normalizedNeighborhood = String(neighborhood).trim().toLocaleLowerCase("pt-BR");
-          const normalizedCity = String(city).trim().toLocaleLowerCase("pt-BR");
-          const normalizedState = String(address.state || "").trim().toLocaleLowerCase("pt-BR");
+        let number = accuracy <= 35 ? address.house_number || "" : "";
+        let neighborhood =
+          address.suburb ||
+          address.neighbourhood ||
+          address.quarter ||
+          address.borough ||
+          address.city_district ||
+          "";
 
-          if (
-            normalizedNeighborhood === normalizedCity ||
-            normalizedNeighborhood === normalizedState ||
-            normalizedNeighborhood === "rio de janeiro" ||
-            normalizedNeighborhood === "rj"
-          ) {
-            neighborhood = "";
-          }
+        let city =
+          address.city ||
+          address.town ||
+          address.municipality ||
+          address.village ||
+          "";
 
-          const cepDigits = String(cep).replace(/\D/g, "");
+        let state =
+          String(address["ISO3166-2-lvl4"] || address["ISO3166-2-lvl6"] || "")
+            .split("-")
+            .pop() || "";
 
-          if (cepDigits.length === 8) {
-            try {
-              const cepResponse = await fetch(
-                `https://brasilapi.com.br/api/cep/v1/${cepDigits}`
-              );
+        let cep = accuracy <= 45 ? address.postcode || "" : "";
 
-              if (cepResponse.ok) {
-                const cepData = await cepResponse.json();
+        const normalizedNeighborhood = String(neighborhood).trim().toLocaleLowerCase("pt-BR");
+        const normalizedCity = String(city).trim().toLocaleLowerCase("pt-BR");
+        const normalizedState = String(address.state || "").trim().toLocaleLowerCase("pt-BR");
 
-                street = cepData.street || street;
+        if (
+          normalizedNeighborhood === normalizedCity ||
+          normalizedNeighborhood === normalizedState ||
+          normalizedNeighborhood === "rio de janeiro" ||
+          normalizedNeighborhood === "rj"
+        ) {
+          neighborhood = "";
+        }
+
+        const cepDigits = String(cep).replace(/\D/g, "");
+
+        if (cepDigits.length === 8) {
+          try {
+            const cepResponse = await fetch(
+              `https://brasilapi.com.br/api/cep/v1/${cepDigits}`
+            );
+
+            if (cepResponse.ok) {
+              const cepData = await cepResponse.json();
+              const reverseStreet = normalizeAddressPart(String(street || ""));
+              const cepStreet = normalizeAddressPart(String(cepData.street || ""));
+
+              const streetsMatch =
+                !reverseStreet ||
+                !cepStreet ||
+                reverseStreet.includes(cepStreet) ||
+                cepStreet.includes(reverseStreet);
+
+              if (streetsMatch) {
+                street = street || cepData.street || "";
 
                 const cepNeighborhood = String(cepData.neighborhood || "").trim();
                 if (
@@ -330,67 +360,104 @@ function App() {
                 city = cepData.city || city;
                 state = cepData.state || state;
                 cep = cepData.cep || cep;
+              } else {
+                cep = "";
               }
-            } catch {
-              // O endereço obtido pelas coordenadas continua válido se a consulta de CEP falhar.
             }
+          } catch {
+            // Mantém somente os dados confiáveis obtidos pelas coordenadas.
           }
-
-          setForm((current) => ({
-            ...current,
-            coordinates: { lat, lng },
-            address: street || current.address,
-            number: number || current.number,
-            neighborhood: neighborhood || current.neighborhood,
-            cep: cep || current.cep,
-            city: city || current.city,
-            state: state || current.state
-          }));
-
-          const missing: string[] = [];
-          if (!street) missing.push("rua");
-          if (!number) missing.push("número");
-          if (!neighborhood) missing.push("bairro");
-          if (!cep) missing.push("CEP");
-
-          if (missing.length === 0) {
-            setLocationMessage(
-              `Endereço encontrado. Confira os dados antes de continuar. Precisão do aparelho: cerca de ${accuracy} m.`
-            );
-          } else {
-            setLocationMessage(
-              `Localização encontrada. Não foi possível confirmar automaticamente: ${missing.join(", ")}. Confira e complete os campos. Precisão do aparelho: cerca de ${accuracy} m.`
-            );
-          }
-        } catch {
-          setLocationMessage(
-            `As coordenadas foram encontradas, mas o serviço de endereço não respondeu. Confira os campos manualmente. Precisão do aparelho: cerca de ${accuracy} m.`
-          );
-        } finally {
-          setLocating(false);
         }
-      },
-      (error) => {
-        setLocating(false);
 
-        if (error.code === error.PERMISSION_DENIED) {
+        setForm((current) => ({
+          ...current,
+          coordinates: { lat, lng },
+          address: street || current.address,
+          number,
+          neighborhood: neighborhood || current.neighborhood,
+          cep,
+          city: city || current.city,
+          state: state || current.state
+        }));
+
+        const missing: string[] = [];
+        if (!street) missing.push("rua");
+        if (!number) missing.push("número");
+        if (!neighborhood) missing.push("bairro");
+        if (!cep) missing.push("CEP");
+
+        if (missing.length === 0) {
           setLocationMessage(
-            "A localização está bloqueada para este site. Libere a permissão de localização no navegador e tente novamente."
-          );
-        } else if (error.code === error.TIMEOUT) {
-          setLocationMessage(
-            "O GPS demorou para responder. Tente novamente em um local com melhor sinal."
+            `Endereço encontrado com precisão aproximada de ${accuracy} m. Confira antes de continuar.`
           );
         } else {
           setLocationMessage(
-            "Não foi possível obter a localização atual. Tente novamente ou preencha o endereço manualmente."
+            `Localização com precisão aproximada de ${accuracy} m. Confira e complete: ${missing.join(", ")}.`
+          );
+        }
+      } catch {
+        setLocationMessage(
+          `Coordenadas obtidas com precisão aproximada de ${accuracy} m, mas o endereço não pôde ser confirmado. Preencha os campos manualmente.`
+        );
+      } finally {
+        setLocating(false);
+      }
+    };
+
+    const samplingTimer = window.setTimeout(() => {
+      if (finished) return;
+
+      if (bestPosition) {
+        void resolveAddress(bestPosition);
+      } else {
+        finished = true;
+        stopWatching();
+        setLocating(false);
+        setLocationMessage(
+          "Não foi possível obter uma localização confiável. Tente novamente em um local com melhor sinal."
+        );
+      }
+    }, 12000);
+
+    watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        if (finished) return;
+
+        if (
+          !bestPosition ||
+          position.coords.accuracy < bestPosition.coords.accuracy
+        ) {
+          bestPosition = position;
+          const currentAccuracy = Math.round(position.coords.accuracy);
+          setLocationMessage(
+            currentAccuracy <= 25
+              ? `Boa precisão encontrada (~${currentAccuracy} m). Confirmando endereço...`
+              : `Melhorando a precisão... agora ~${currentAccuracy} m.`
+          );
+        }
+
+        if (position.coords.accuracy <= 25) {
+          window.clearTimeout(samplingTimer);
+          void resolveAddress(position);
+        }
+      },
+      (error) => {
+        if (finished) return;
+
+        if (error.code === error.PERMISSION_DENIED) {
+          finished = true;
+          window.clearTimeout(samplingTimer);
+          stopWatching();
+          setLocating(false);
+          setLocationMessage(
+            "A localização precisa está bloqueada para este site. Libere a permissão de localização precisa no navegador e tente novamente."
           );
         }
       },
       {
         enableHighAccuracy: true,
-        timeout: 20000,
-        maximumAge: 0
+        maximumAge: 0,
+        timeout: 15000
       }
     );
   };
