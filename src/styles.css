@@ -477,3 +477,39 @@ button:disabled { cursor: not-allowed; opacity: .5; }
   .category-card { min-height: 94px; }
   .hero h1 { font-size: 25px; }
 }
+
+
+.occurrence-location-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin: 16px 0 20px;
+  padding: 14px;
+  border: 1px solid #dce9fb;
+  border-radius: 16px;
+  background: #f5f9ff;
+  color: #214a7a;
+}
+
+.occurrence-location-note > svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: #0b5ed7;
+}
+
+.occurrence-location-note div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.occurrence-location-note strong {
+  font-size: 12px;
+  color: #173f70;
+}
+
+.occurrence-location-note span {
+  font-size: 10px;
+  line-height: 1.5;
+  color: #6d8099;
+}
