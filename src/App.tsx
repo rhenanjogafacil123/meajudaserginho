@@ -48,6 +48,7 @@ type CallItem = {
 
 type FormState = {
   category: string;
+  otherDetails: string;
   address: string;
   neighborhood: string;
   description: string;
@@ -104,6 +105,7 @@ const seedCalls: CallItem[] = [
 
 const initialForm: FormState = {
   category: "",
+  otherDetails: "",
   address: "",
   neighborhood: "",
   description: "",
@@ -144,7 +146,7 @@ function App() {
 
   const startNew = (category = "") => {
     setForm({ ...initialForm, category });
-    setStep(category ? 2 : 1);
+    setStep(category && category !== "Outro" ? 2 : 1);
     setLocationMessage("");
     setScreen("new");
   };
@@ -212,7 +214,9 @@ function App() {
     const item: CallItem = {
       id: String(Date.now()),
       protocol,
-      category: form.category || "Outro",
+      category: form.category === "Outro"
+        ? form.otherDetails.trim() || "Outro"
+        : form.category || "Outro",
       address: form.address || "Localização informada pelo celular",
       neighborhood: form.neighborhood || "Bairro não informado",
       description: form.description || "Sem detalhes adicionais.",
@@ -375,7 +379,13 @@ function App() {
                 <button
                   key={label}
                   className={"category-card " + (form.category === label ? "selected" : "")}
-                  onClick={() => setForm({ ...form, category: label })}
+                  onClick={() =>
+                    setForm({
+                      ...form,
+                      category: label,
+                      otherDetails: label === "Outro" ? form.otherDetails : ""
+                    })
+                  }
                 >
                   <span className="category-icon"><Icon size={22} /></span>
                   <span>{label}</span>
@@ -383,7 +393,29 @@ function App() {
                 </button>
               ))}
             </div>
-            <button className="primary full" disabled={!form.category} onClick={() => setStep(2)}>
+
+            {form.category === "Outro" && (
+              <div className="other-problem-box">
+                <label className="field">
+                  <span>Qual é o problema?</span>
+                  <input
+                    autoFocus
+                    value={form.otherDetails}
+                    placeholder="Ex.: árvore caída, vazamento, praça danificada..."
+                    onChange={(e) => setForm({ ...form, otherDetails: e.target.value })}
+                  />
+                </label>
+                <p className="other-problem-help">
+                  Escreva em poucas palavras para a equipe identificar corretamente o tipo de ocorrência.
+                </p>
+              </div>
+            )}
+
+            <button
+              className="primary full"
+              disabled={!form.category || (form.category === "Outro" && !form.otherDetails.trim())}
+              onClick={() => setStep(2)}
+            >
               Continuar <ChevronRight size={19} />
             </button>
           </section>
@@ -520,7 +552,10 @@ function App() {
 
             <div className="summary-card">
               <div className="summary-title"><MessageSquareText size={19} /> Resumo do chamado</div>
-              <SummaryRow label="Categoria" value={form.category} />
+              <SummaryRow
+                label="Categoria"
+                value={form.category === "Outro" ? form.otherDetails || "Outro" : form.category}
+              />
               <SummaryRow label="Local" value={form.address || "Localização do celular"} />
               <SummaryRow label="Bairro" value={form.neighborhood || "Não informado"} />
               <SummaryRow label="Mídia" value={form.mediaName || "Sem mídia"} />
