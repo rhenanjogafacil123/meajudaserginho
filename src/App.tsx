@@ -75,6 +75,42 @@ const categories = [
   { label: "Outro", icon: Menu }
 ];
 
+const rioNeighborhoods = [
+  "Abolição", "Acari", "Água Santa", "Alto da Boa Vista", "Anchieta", "Andaraí",
+  "Anil", "Bancários", "Bangu", "Barra da Tijuca", "Barra de Guaratiba",
+  "Barros Filho", "Benfica", "Bento Ribeiro", "Bonsucesso", "Botafogo",
+  "Brás de Pina", "Cachambi", "Cacuia", "Caju", "Camorim", "Campinho",
+  "Campo dos Afonsos", "Campo Grande", "Cascadura", "Catete", "Catumbi",
+  "Cavalcanti", "Centro", "Cidade de Deus", "Cidade Nova", "Cidade Universitária",
+  "Cocotá", "Coelho Neto", "Colégio", "Complexo do Alemão", "Copacabana",
+  "Cordovil", "Cosme Velho", "Cosmos", "Costa Barros", "Curicica",
+  "Del Castilho", "Deodoro", "Encantado", "Engenheiro Leal", "Engenho da Rainha",
+  "Engenho de Dentro", "Engenho Novo", "Estácio", "Flamengo",
+  "Freguesia (Ilha)", "Freguesia (Jacarepaguá)", "Galeão", "Gamboa",
+  "Gardênia Azul", "Gávea", "Gericinó", "Glória", "Grajaú", "Grumari",
+  "Guadalupe", "Guaratiba", "Higienópolis", "Honório Gurgel", "Humaitá",
+  "Inhaúma", "Inhoaíba", "Ipanema", "Irajá", "Itanhangá", "Jabour",
+  "Jacaré", "Jacarepaguá", "Jacarezinho", "Jardim América", "Jardim Botânico",
+  "Jardim Carioca", "Jardim Guanabara", "Jardim Sulacap", "Joá", "Lagoa",
+  "Lapa", "Laranjeiras", "Leblon", "Leme", "Lins de Vasconcelos",
+  "Madureira", "Magalhães Bastos", "Mangueira", "Manguinhos", "Maracanã",
+  "Maré", "Marechal Hermes", "Maria da Graça", "Méier", "Moneró", "Olaria",
+  "Oswaldo Cruz", "Paciência", "Padre Miguel", "Paquetá", "Parada de Lucas",
+  "Parque Anchieta", "Parque Colúmbia", "Pavuna", "Pechincha",
+  "Pedra de Guaratiba", "Penha", "Penha Circular", "Piedade", "Pilares",
+  "Pitangueiras", "Portuguesa", "Praia da Bandeira", "Praça da Bandeira",
+  "Praça Seca", "Quintino Bocaiúva", "Ramos", "Realengo",
+  "Recreio dos Bandeirantes", "Riachuelo", "Ribeira", "Ricardo de Albuquerque",
+  "Rio Comprido", "Rocinha", "Rocha", "Rocha Miranda", "Sampaio",
+  "Santa Cruz", "Santa Teresa", "Santíssimo", "Santo Cristo", "São Conrado",
+  "São Cristóvão", "São Francisco Xavier", "Saúde", "Senador Camará",
+  "Senador Vasconcelos", "Sepetiba", "Tanque", "Taquara", "Tauá", "Tijuca",
+  "Todos os Santos", "Tomás Coelho", "Turiaçu", "Urca", "Vargem Grande",
+  "Vargem Pequena", "Vasco da Gama", "Vaz Lobo", "Vicente de Carvalho",
+  "Vidigal", "Vigário Geral", "Vila da Penha", "Vila Isabel", "Vila Kennedy",
+  "Vila Kosmos", "Vila Militar", "Vila Valqueire", "Vista Alegre", "Zumbi"
+];
+
 const seedCalls: CallItem[] = [
   {
     id: "seed-1",
@@ -198,39 +234,78 @@ function App() {
     }
 
     setLocating(true);
-    setLocationMessage("Solicitando permissão de localização...");
+    setLocationMessage("Solicitando a localização exata do aparelho...");
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
+        const accuracy = Math.round(position.coords.accuracy);
 
         setForm((current) => ({
           ...current,
           coordinates: { lat, lng }
         }));
-        setLocationMessage("Localização encontrada. Buscando endereço...");
+        setLocationMessage("Coordenadas encontradas. Identificando o endereço...");
 
         try {
-          const geoResponse = await fetch(
-            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=pt`
+          const reverseResponse = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&zoom=18&addressdetails=1&accept-language=pt-BR`
           );
 
-          if (!geoResponse.ok) {
-            throw new Error("Falha ao converter localização em endereço.");
+          if (!reverseResponse.ok) {
+            throw new Error("Falha no serviço de endereço.");
           }
 
-          const geo = await geoResponse.json();
-          const cepDigits = String(geo.postcode || "").replace(/\D/g, "");
-          const stateCode = String(geo.principalSubdivisionCode || "")
-            .split("-")
-            .pop() || "";
+          const reverse = await reverseResponse.json();
+          const address = reverse.address || {};
 
-          let street = "";
-          let neighborhood = geo.locality || "";
-          let city = geo.city || geo.locality || "";
-          let state = stateCode;
-          let cep = geo.postcode || "";
+          let street =
+            address.road ||
+            address.pedestrian ||
+            address.residential ||
+            address.footway ||
+            address.path ||
+            address.cycleway ||
+            "";
+
+          let number = address.house_number || "";
+          let neighborhood =
+            address.suburb ||
+            address.neighbourhood ||
+            address.quarter ||
+            address.borough ||
+            address.city_district ||
+            "";
+
+          let city =
+            address.city ||
+            address.town ||
+            address.municipality ||
+            address.village ||
+            "";
+
+          let state =
+            String(address["ISO3166-2-lvl4"] || address["ISO3166-2-lvl6"] || "")
+              .split("-")
+              .pop() || "";
+
+          let cep = address.postcode || "";
+
+          const normalizedNeighborhood = String(neighborhood).trim().toLocaleLowerCase("pt-BR");
+          const normalizedCity = String(city).trim().toLocaleLowerCase("pt-BR");
+          const normalizedState = String(address.state || "").trim().toLocaleLowerCase("pt-BR");
+
+          if (
+            normalizedNeighborhood === normalizedCity ||
+            normalizedNeighborhood === normalizedState ||
+            normalizedNeighborhood === "rio de janeiro" ||
+            normalizedNeighborhood === "rj"
+          ) {
+            neighborhood = "";
+          }
+
+          const cepDigits = String(cep).replace(/\D/g, "");
 
           if (cepDigits.length === 8) {
             try {
@@ -240,14 +315,24 @@ function App() {
 
               if (cepResponse.ok) {
                 const cepData = await cepResponse.json();
-                street = cepData.street || "";
-                neighborhood = cepData.neighborhood || neighborhood;
+
+                street = cepData.street || street;
+
+                const cepNeighborhood = String(cepData.neighborhood || "").trim();
+                if (
+                  cepNeighborhood &&
+                  cepNeighborhood.toLocaleLowerCase("pt-BR") !==
+                    String(cepData.city || city).trim().toLocaleLowerCase("pt-BR")
+                ) {
+                  neighborhood = cepNeighborhood;
+                }
+
                 city = cepData.city || city;
                 state = cepData.state || state;
                 cep = cepData.cep || cep;
               }
             } catch {
-              // Mantém os dados obtidos pelo GPS caso a consulta de CEP falhe.
+              // O endereço obtido pelas coordenadas continua válido se a consulta de CEP falhar.
             }
           }
 
@@ -255,20 +340,31 @@ function App() {
             ...current,
             coordinates: { lat, lng },
             address: street || current.address,
+            number: number || current.number,
             neighborhood: neighborhood || current.neighborhood,
             cep: cep || current.cep,
             city: city || current.city,
             state: state || current.state
           }));
 
-          setLocationMessage(
-            street
-              ? "Endereço preenchido. Confira o número e o complemento."
-              : "Localização encontrada. Confira e complete os dados do endereço."
-          );
+          const missing: string[] = [];
+          if (!street) missing.push("rua");
+          if (!number) missing.push("número");
+          if (!neighborhood) missing.push("bairro");
+          if (!cep) missing.push("CEP");
+
+          if (missing.length === 0) {
+            setLocationMessage(
+              `Endereço encontrado. Confira os dados antes de continuar. Precisão do aparelho: cerca de ${accuracy} m.`
+            );
+          } else {
+            setLocationMessage(
+              `Localização encontrada. Não foi possível confirmar automaticamente: ${missing.join(", ")}. Confira e complete os campos. Precisão do aparelho: cerca de ${accuracy} m.`
+            );
+          }
         } catch {
           setLocationMessage(
-            "Localização encontrada, mas não foi possível preencher o endereço automaticamente. Complete os campos abaixo."
+            `As coordenadas foram encontradas, mas o serviço de endereço não respondeu. Confira os campos manualmente. Precisão do aparelho: cerca de ${accuracy} m.`
           );
         } finally {
           setLocating(false);
@@ -279,19 +375,23 @@ function App() {
 
         if (error.code === error.PERMISSION_DENIED) {
           setLocationMessage(
-            "Permissão de localização negada. Libere a localização para este site nas configurações do navegador ou informe o endereço manualmente."
+            "A localização está bloqueada para este site. Libere a permissão de localização no navegador e tente novamente."
           );
         } else if (error.code === error.TIMEOUT) {
           setLocationMessage(
-            "A localização demorou demais para responder. Tente novamente ou informe o endereço manualmente."
+            "O GPS demorou para responder. Tente novamente em um local com melhor sinal."
           );
         } else {
           setLocationMessage(
-            "Não foi possível acessar sua localização. Você pode informar o endereço manualmente."
+            "Não foi possível obter a localização atual. Tente novamente ou preencha o endereço manualmente."
           );
         }
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+      {
+        enableHighAccuracy: true,
+        timeout: 20000,
+        maximumAge: 0
+      }
     );
   };
 
@@ -625,10 +725,22 @@ function App() {
             <label className="field">
               <span>Bairro</span>
               <input
+                list={
+                  form.city.trim().toLocaleLowerCase("pt-BR").includes("rio de janeiro")
+                    ? "rio-neighborhoods"
+                    : undefined
+                }
                 value={form.neighborhood}
-                placeholder="Ex.: Centro"
+                placeholder="Ex.: Tijuca"
                 onChange={(e) => setForm({ ...form, neighborhood: e.target.value })}
               />
+              {form.city.trim().toLocaleLowerCase("pt-BR").includes("rio de janeiro") && (
+                <datalist id="rio-neighborhoods">
+                  {rioNeighborhoods.map((neighborhood) => (
+                    <option key={neighborhood} value={neighborhood} />
+                  ))}
+                </datalist>
+              )}
             </label>
 
             <label className="field">
@@ -662,7 +774,12 @@ function App() {
 
             <button type="button"
               className="primary full"
-              disabled={!form.coordinates && !form.address.trim()}
+              disabled={
+                !form.address.trim() ||
+                !form.neighborhood.trim() ||
+                !form.city.trim() ||
+                !form.state.trim()
+              }
               onClick={() => setStep(4)}
             >
               Continuar <ChevronRight size={19} />
