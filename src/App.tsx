@@ -35,7 +35,12 @@ type CallItem = {
   protocol: string;
   category: string;
   address: string;
+  number: string;
+  complement: string;
   neighborhood: string;
+  cep: string;
+  city: string;
+  state: string;
   description: string;
   reference?: string;
   status: Status;
@@ -107,7 +112,12 @@ const initialForm: FormState = {
   category: "",
   otherDetails: "",
   address: "",
+  number: "",
+  complement: "",
   neighborhood: "",
+  cep: "",
+  city: "",
+  state: "",
   description: "",
   reference: "",
   mediaName: "",
@@ -186,25 +196,102 @@ function App() {
       setLocationMessage("Seu navegador não oferece geolocalização.");
       return;
     }
+
     setLocating(true);
-    setLocationMessage("");
+    setLocationMessage("Solicitando permissão de localização...");
+
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+
         setForm((current) => ({
           ...current,
-          coordinates: {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          }
+          coordinates: { lat, lng }
         }));
-        setLocating(false);
-        setLocationMessage("Localização identificada com sucesso.");
+        setLocationMessage("Localização encontrada. Buscando endereço...");
+
+        try {
+          const geoResponse = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=pt`
+          );
+
+          if (!geoResponse.ok) {
+            throw new Error("Falha ao converter localização em endereço.");
+          }
+
+          const geo = await geoResponse.json();
+          const cepDigits = String(geo.postcode || "").replace(/\D/g, "");
+          const stateCode = String(geo.principalSubdivisionCode || "")
+            .split("-")
+            .pop() || "";
+
+          let street = "";
+          let neighborhood = geo.locality || "";
+          let city = geo.city || geo.locality || "";
+          let state = stateCode;
+          let cep = geo.postcode || "";
+
+          if (cepDigits.length === 8) {
+            try {
+              const cepResponse = await fetch(
+                `https://brasilapi.com.br/api/cep/v1/${cepDigits}`
+              );
+
+              if (cepResponse.ok) {
+                const cepData = await cepResponse.json();
+                street = cepData.street || "";
+                neighborhood = cepData.neighborhood || neighborhood;
+                city = cepData.city || city;
+                state = cepData.state || state;
+                cep = cepData.cep || cep;
+              }
+            } catch {
+              // Mantém os dados obtidos pelo GPS caso a consulta de CEP falhe.
+            }
+          }
+
+          setForm((current) => ({
+            ...current,
+            coordinates: { lat, lng },
+            address: street || current.address,
+            neighborhood: neighborhood || current.neighborhood,
+            cep: cep || current.cep,
+            city: city || current.city,
+            state: state || current.state
+          }));
+
+          setLocationMessage(
+            street
+              ? "Endereço preenchido. Confira o número e o complemento."
+              : "Localização encontrada. Confira e complete os dados do endereço."
+          );
+        } catch {
+          setLocationMessage(
+            "Localização encontrada, mas não foi possível preencher o endereço automaticamente. Complete os campos abaixo."
+          );
+        } finally {
+          setLocating(false);
+        }
       },
-      () => {
+      (error) => {
         setLocating(false);
-        setLocationMessage("Não foi possível acessar sua localização. Você pode informar o endereço manualmente.");
+
+        if (error.code === error.PERMISSION_DENIED) {
+          setLocationMessage(
+            "Permissão de localização negada. Libere a localização para este site nas configurações do navegador ou informe o endereço manualmente."
+          );
+        } else if (error.code === error.TIMEOUT) {
+          setLocationMessage(
+            "A localização demorou demais para responder. Tente novamente ou informe o endereço manualmente."
+          );
+        } else {
+          setLocationMessage(
+            "Não foi possível acessar sua localização. Você pode informar o endereço manualmente."
+          );
+        }
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
     );
   };
 
@@ -217,8 +304,16 @@ function App() {
       category: form.category === "Outro"
         ? form.otherDetails.trim() || "Outro"
         : form.category || "Outro",
-      address: form.address || "Localização informada pelo celular",
-      neighborhood: form.neighborhood || "Bairro não informado",
+      address:
+        [form.address, form.number && "nº " + form.number, form.complement]
+          .filter(Boolean)
+          .join(", ") ||
+        "Localização informada pelo celular",
+      neighborhood:
+        [form.neighborhood, form.city, form.state, form.cep]
+          .filter(Boolean)
+          .join(" · ") ||
+        "Bairro não informado",
       description: form.description || "Sem detalhes adicionais.",
       reference: form.reference,
       status: "Recebido",
@@ -497,22 +592,71 @@ function App() {
               </div>
             )}
 
-            <div className="divider"><span>ou informe manualmente</span></div>
+            <div className="divider"><span>confira ou preencha os dados</span></div>
 
             <label className="field">
-              <span>Rua, avenida, número ou referência</span>
+              <span>Rua / Avenida</span>
               <input
                 value={form.address}
-                placeholder="Ex.: Rua das Flores, próximo ao nº 120"
+                placeholder="Ex.: Rua das Flores"
                 onChange={(e) => setForm({ ...form, address: e.target.value })}
               />
             </label>
+
+            <label className="field">
+              <span>Número</span>
+              <input
+                inputMode="numeric"
+                value={form.number}
+                placeholder="Ex.: 120"
+                onChange={(e) => setForm({ ...form, number: e.target.value })}
+              />
+            </label>
+
+            <label className="field">
+              <span>Complemento <em>opcional</em></span>
+              <input
+                value={form.complement}
+                placeholder="Ex.: casa 2, bloco B"
+                onChange={(e) => setForm({ ...form, complement: e.target.value })}
+              />
+            </label>
+
             <label className="field">
               <span>Bairro</span>
               <input
                 value={form.neighborhood}
                 placeholder="Ex.: Centro"
                 onChange={(e) => setForm({ ...form, neighborhood: e.target.value })}
+              />
+            </label>
+
+            <label className="field">
+              <span>CEP</span>
+              <input
+                inputMode="numeric"
+                value={form.cep}
+                placeholder="Ex.: 40000-000"
+                onChange={(e) => setForm({ ...form, cep: e.target.value })}
+              />
+            </label>
+
+            <label className="field">
+              <span>Cidade</span>
+              <input
+                value={form.city}
+                placeholder="Ex.: Salvador"
+                onChange={(e) => setForm({ ...form, city: e.target.value })}
+              />
+            </label>
+
+            <label className="field">
+              <span>UF</span>
+              <input
+                maxLength={2}
+                value={form.state}
+                placeholder="Ex.: BA"
+                onChange={(e) => setForm({ ...form, state: e.target.value.toUpperCase() })}
               />
             </label>
 
@@ -556,8 +700,19 @@ function App() {
                 label="Categoria"
                 value={form.category === "Outro" ? form.otherDetails || "Outro" : form.category}
               />
-              <SummaryRow label="Local" value={form.address || "Localização do celular"} />
-              <SummaryRow label="Bairro" value={form.neighborhood || "Não informado"} />
+              <SummaryRow
+                label="Local"
+                value={
+                  [form.address, form.number && "nº " + form.number, form.complement]
+                    .filter(Boolean)
+                    .join(", ") || "Localização do celular"
+                }
+              />
+              <SummaryRow
+                label="Bairro"
+                value={[form.neighborhood, form.city, form.state].filter(Boolean).join(" · ") || "Não informado"}
+              />
+              <SummaryRow label="CEP" value={form.cep || "Não informado"} />
               <SummaryRow label="Mídia" value={form.mediaName || "Sem mídia"} />
             </div>
 
