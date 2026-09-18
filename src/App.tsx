@@ -17,7 +17,7 @@ import {
   MessageSquareText,
   Navigation,
   Plus,
-  Road,
+  Route,
   Send,
   Trash2,
   Upload,
@@ -61,7 +61,7 @@ type FormState = {
 
 const categories = [
   { label: "Buraco na rua", icon: Construction },
-  { label: "Rua sem asfalto", icon: Road },
+  { label: "Rua sem asfalto", icon: Route },
   { label: "Iluminação", icon: Lightbulb },
   { label: "Lixo/Entulho", icon: Trash2 },
   { label: "Drenagem", icon: Waves },
