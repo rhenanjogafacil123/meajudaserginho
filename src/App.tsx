@@ -620,7 +620,7 @@ function App() {
     </>
   );
 
-  const NewCallScreen = () => (
+  const renderNewCallScreen = () => (
     <>
       {renderHeader("Novo chamado", () => {
         if (step > 1) setStep(step - 1);
@@ -1054,7 +1054,7 @@ function App() {
     <div className="app-shell">
       <div className="phone">
         {screen === "home" && <HomeScreen />}
-        {screen === "new" && <NewCallScreen />}
+        {screen === "new" && renderNewCallScreen()}
         {screen === "calls" && <CallsScreen />}
         {screen === "detail" && <DetailScreen />}
         {screen === "notices" && <NoticesScreen />}
