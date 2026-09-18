@@ -449,7 +449,26 @@ function App() {
           <section>
             <span className="eyebrow">Evidência</span>
             <h1 className="page-title">Mostre o problema</h1>
-            <p className="page-subtitle">Uma foto ou vídeo ajuda a equipe a entender melhor a situação.</p>
+            <p className="page-subtitle">
+              Registre imagens que ajudem a equipe a entender o que aconteceu e a encontrar o ponto certo quando chegar ao local.
+            </p>
+
+            <div className="media-guidance">
+              <div className="media-guidance-item">
+                <Camera size={18} />
+                <div>
+                  <strong>Na foto</strong>
+                  <span>Mostre o problema de forma clara e, se puder, inclua algum detalhe do entorno que ajude a reconhecer o local.</span>
+                </div>
+              </div>
+              <div className="media-guidance-item">
+                <Video size={18} />
+                <div>
+                  <strong>No vídeo</strong>
+                  <span>Mostre o problema e um pouco da localidade ao redor, como esquina, fachada, poste, placa ou outro ponto de referência.</span>
+                </div>
+              </div>
+            </div>
 
             {form.mediaPreview ? (
               <div className="media-preview">
@@ -470,7 +489,7 @@ function App() {
               <div className="media-empty">
                 <div className="media-empty-icon"><Camera size={32} /></div>
                 <strong>Adicione uma foto ou vídeo</strong>
-                <span>É recomendado, mas não obrigatório nesta demonstração.</span>
+                <span>Quanto mais fácil for reconhecer o problema e o local, melhor será para a equipe encontrar o ponto correto.</span>
               </div>
             )}
 
