@@ -423,7 +423,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
   backdrop-filter: blur(18px);
   border-top: 1px solid #e7ebf1;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(4, 1fr);
   align-items: center;
 }
 
@@ -440,26 +440,16 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 }
 .bottom-nav button.active { color: #0b5ed7; }
 .bottom-nav .new-button {
-  position: absolute;
-  left: 50%;
-  top: -18px;
-  transform: translateX(-50%);
-  width: 52px;
-  height: 52px;
+  position: static;
+  width: auto;
+  height: auto;
   margin: 0;
-  border-radius: 18px;
-  background: linear-gradient(145deg, #0b5ed7, #0848a7);
-  color: white;
-  box-shadow: 0 9px 22px rgba(11,94,215,.32);
-  z-index: 2;
-}
-
-.bottom-nav > button:nth-child(2) {
-  margin-right: 34px;
-}
-
-.bottom-nav > button:nth-child(4) {
-  margin-left: 34px;
+  transform: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: #0b5ed7;
+  z-index: auto;
 }
 
 @media (min-width: 431px) {
