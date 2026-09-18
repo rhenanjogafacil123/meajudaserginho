@@ -11,7 +11,6 @@ import {
   FileImage,
   Home,
   Lightbulb,
-  LocateFixed,
   MapPin,
   Menu,
   MessageSquareText,
@@ -178,8 +177,6 @@ function App() {
   const [calls, setCalls] = useState<CallItem[]>(loadCalls);
   const [selectedCall, setSelectedCall] = useState<CallItem | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
-  const [locating, setLocating] = useState(false);
-  const [locationMessage, setLocationMessage] = useState("");
   const [latestProtocol, setLatestProtocol] = useState("");
   const galleryInput = useRef<HTMLInputElement>(null);
   const photoInput = useRef<HTMLInputElement>(null);
@@ -193,7 +190,6 @@ function App() {
   const startNew = (category = "") => {
     setForm({ ...initialForm, category });
     setStep(category && category !== "Outro" ? 2 : 1);
-    setLocationMessage("");
     setScreen("new");
   };
 
@@ -225,241 +221,6 @@ function App() {
         mediaPreview: url
       }));
     }
-  };
-
-  const requestLocation = () => {
-    if (!navigator.geolocation) {
-      setLocationMessage("Seu navegador não oferece geolocalização.");
-      return;
-    }
-
-    setLocating(true);
-    setLocationMessage("Buscando uma localização mais precisa...");
-
-    let bestPosition: GeolocationPosition | null = null;
-    let finished = false;
-    let watchId = -1;
-
-    const normalizeAddressPart = (value: string) =>
-      value
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLocaleLowerCase("pt-BR")
-        .replace(/\b(rua|r\.?|avenida|av\.?|estrada|travessa|tv\.?)\b/g, "")
-        .replace(/[^a-z0-9]/g, "");
-
-    const stopWatching = () => {
-      if (watchId >= 0) navigator.geolocation.clearWatch(watchId);
-    };
-
-    const resolveAddress = async (position: GeolocationPosition) => {
-      if (finished) return;
-      finished = true;
-      stopWatching();
-
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
-      const accuracy = Math.round(position.coords.accuracy);
-
-      setForm((current) => ({
-        ...current,
-        coordinates: { lat, lng }
-      }));
-      setLocationMessage(
-        `Melhor localização encontrada (~${accuracy} m). Identificando o endereço...`
-      );
-
-      try {
-        const reverseResponse = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&zoom=18&addressdetails=1&accept-language=pt-BR`
-        );
-
-        if (!reverseResponse.ok) {
-          throw new Error("Falha no serviço de endereço.");
-        }
-
-        const reverse = await reverseResponse.json();
-        const address = reverse.address || {};
-
-        let street =
-          address.road ||
-          address.pedestrian ||
-          address.residential ||
-          address.footway ||
-          address.path ||
-          address.cycleway ||
-          "";
-
-        let number = accuracy <= 35 ? address.house_number || "" : "";
-        let neighborhood =
-          address.suburb ||
-          address.neighbourhood ||
-          address.quarter ||
-          address.borough ||
-          address.city_district ||
-          "";
-
-        let city =
-          address.city ||
-          address.town ||
-          address.municipality ||
-          address.village ||
-          "";
-
-        let state =
-          String(address["ISO3166-2-lvl4"] || address["ISO3166-2-lvl6"] || "")
-            .split("-")
-            .pop() || "";
-
-        let cep = accuracy <= 45 ? address.postcode || "" : "";
-
-        const normalizedNeighborhood = String(neighborhood).trim().toLocaleLowerCase("pt-BR");
-        const normalizedCity = String(city).trim().toLocaleLowerCase("pt-BR");
-        const normalizedState = String(address.state || "").trim().toLocaleLowerCase("pt-BR");
-
-        if (
-          normalizedNeighborhood === normalizedCity ||
-          normalizedNeighborhood === normalizedState ||
-          normalizedNeighborhood === "rio de janeiro" ||
-          normalizedNeighborhood === "rj"
-        ) {
-          neighborhood = "";
-        }
-
-        const cepDigits = String(cep).replace(/\D/g, "");
-
-        if (cepDigits.length === 8) {
-          try {
-            const cepResponse = await fetch(
-              `https://brasilapi.com.br/api/cep/v1/${cepDigits}`
-            );
-
-            if (cepResponse.ok) {
-              const cepData = await cepResponse.json();
-              const reverseStreet = normalizeAddressPart(String(street || ""));
-              const cepStreet = normalizeAddressPart(String(cepData.street || ""));
-
-              const streetsMatch =
-                !reverseStreet ||
-                !cepStreet ||
-                reverseStreet.includes(cepStreet) ||
-                cepStreet.includes(reverseStreet);
-
-              if (streetsMatch) {
-                street = street || cepData.street || "";
-
-                const cepNeighborhood = String(cepData.neighborhood || "").trim();
-                if (
-                  cepNeighborhood &&
-                  cepNeighborhood.toLocaleLowerCase("pt-BR") !==
-                    String(cepData.city || city).trim().toLocaleLowerCase("pt-BR")
-                ) {
-                  neighborhood = cepNeighborhood;
-                }
-
-                city = cepData.city || city;
-                state = cepData.state || state;
-                cep = cepData.cep || cep;
-              } else {
-                cep = "";
-              }
-            }
-          } catch {
-            // Mantém somente os dados confiáveis obtidos pelas coordenadas.
-          }
-        }
-
-        setForm((current) => ({
-          ...current,
-          coordinates: { lat, lng },
-          address: street || current.address,
-          number,
-          neighborhood: neighborhood || current.neighborhood,
-          cep,
-          city: city || current.city,
-          state: state || current.state
-        }));
-
-        const missing: string[] = [];
-        if (!street) missing.push("rua");
-        if (!number) missing.push("número");
-        if (!neighborhood) missing.push("bairro");
-        if (!cep) missing.push("CEP");
-
-        if (missing.length === 0) {
-          setLocationMessage(
-            `Endereço encontrado com precisão aproximada de ${accuracy} m. Confira antes de continuar.`
-          );
-        } else {
-          setLocationMessage(
-            `Localização com precisão aproximada de ${accuracy} m. Confira e complete: ${missing.join(", ")}.`
-          );
-        }
-      } catch {
-        setLocationMessage(
-          `Coordenadas obtidas com precisão aproximada de ${accuracy} m, mas o endereço não pôde ser confirmado. Preencha os campos manualmente.`
-        );
-      } finally {
-        setLocating(false);
-      }
-    };
-
-    const samplingTimer = window.setTimeout(() => {
-      if (finished) return;
-
-      if (bestPosition) {
-        void resolveAddress(bestPosition);
-      } else {
-        finished = true;
-        stopWatching();
-        setLocating(false);
-        setLocationMessage(
-          "Não foi possível obter uma localização confiável. Tente novamente em um local com melhor sinal."
-        );
-      }
-    }, 12000);
-
-    watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        if (finished) return;
-
-        if (
-          !bestPosition ||
-          position.coords.accuracy < bestPosition.coords.accuracy
-        ) {
-          bestPosition = position;
-          const currentAccuracy = Math.round(position.coords.accuracy);
-          setLocationMessage(
-            currentAccuracy <= 25
-              ? `Boa precisão encontrada (~${currentAccuracy} m). Confirmando endereço...`
-              : `Melhorando a precisão... agora ~${currentAccuracy} m.`
-          );
-        }
-
-        if (position.coords.accuracy <= 25) {
-          window.clearTimeout(samplingTimer);
-          void resolveAddress(position);
-        }
-      },
-      (error) => {
-        if (finished) return;
-
-        if (error.code === error.PERMISSION_DENIED) {
-          finished = true;
-          window.clearTimeout(samplingTimer);
-          stopWatching();
-          setLocating(false);
-          setLocationMessage(
-            "A localização precisa está bloqueada para este site. Libere a permissão de localização precisa no navegador e tente novamente."
-          );
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 15000
-      }
-    );
   };
 
   const submitCall = () => {
@@ -730,37 +491,21 @@ function App() {
 
         {step === 3 && (
           <section>
-            <span className="eyebrow">Localização</span>
-            <h1 className="page-title">Onde fica?</h1>
-            <p className="page-subtitle">Use sua localização ou informe o endereço manualmente.</p>
+            <span className="eyebrow">Local da ocorrência</span>
+            <h1 className="page-title">Onde está o problema?</h1>
+            <p className="page-subtitle">
+              Informe o endereço do ponto que precisa de atenção.
+            </p>
 
-            <button type="button" className="location-button" onClick={requestLocation} disabled={locating}>
-              <LocateFixed size={21} />
+            <div className="occurrence-location-note">
+              <MapPin size={19} />
               <div>
-                <strong>{locating ? "Identificando localização..." : "Usar minha localização"}</strong>
-                <span>Usaremos apenas para identificar a ocorrência.</span>
+                <strong>Informe o local do problema</strong>
+                <span>
+                  Esses dados servem apenas para localizar a ocorrência. Não precisam ser o endereço da sua residência.
+                </span>
               </div>
-              <ChevronRight size={18} />
-            </button>
-
-            {locationMessage && (
-              <div className={"location-message " + (form.coordinates ? "success" : "")}>
-                {form.coordinates ? <CheckCircle2 size={18} /> : <MapPin size={18} />}
-                <span>{locationMessage}</span>
-              </div>
-            )}
-
-            {form.coordinates && (
-              <div className="coordinates">
-                <MapPin size={17} />
-                <div>
-                  <strong>Localização identificada</strong>
-                  <span>{form.coordinates.lat.toFixed(5)}, {form.coordinates.lng.toFixed(5)}</span>
-                </div>
-              </div>
-            )}
-
-            <div className="divider"><span>confira ou preencha os dados</span></div>
+            </div>
 
             <label className="field">
               <span>Rua / Avenida</span>
