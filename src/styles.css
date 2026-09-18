@@ -450,6 +450,22 @@ button:disabled { cursor: not-allowed; opacity: .5; }
   box-shadow: none;
   color: #0b5ed7;
   z-index: auto;
+  gap: 3px;
+}
+
+.bottom-nav .new-button svg {
+  width: 30px;
+  height: 30px;
+  padding: 5px;
+  border-radius: 10px;
+  background: #edf4ff;
+  color: #0b5ed7;
+  stroke-width: 2.4;
+}
+
+.bottom-nav .new-button span {
+  color: #0b5ed7;
+  font-weight: 850;
 }
 
 @media (min-width: 431px) {
