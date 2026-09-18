@@ -547,7 +547,8 @@ function App() {
         <span>Chamados</span>
       </button>
       <button type="button" className="new-button" onClick={() => startNew()}>
-        <Plus size={25} />
+        <Plus size={20} />
+        <span>Novo</span>
       </button>
       <button type="button" className={screen === "notices" ? "active" : ""} onClick={() => setScreen("notices")}>
         <Bell size={20} />
