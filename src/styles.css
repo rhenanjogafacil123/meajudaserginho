@@ -313,6 +313,29 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .field input:focus, .field textarea:focus { border-color: #0b5ed7; box-shadow: 0 0 0 3px rgba(11,94,215,.08); }
 .field input::placeholder, .field textarea::placeholder { color: #a4adba; }
 
+.other-problem-box {
+  margin: -4px 0 18px;
+  padding: 14px;
+  border-radius: 18px;
+  background: #f2f7ff;
+  border: 1px solid #dce9fb;
+}
+
+.other-problem-box .field {
+  margin-bottom: 7px;
+}
+
+.other-problem-box .field > span {
+  color: #244a7c;
+}
+
+.other-problem-help {
+  margin: 0;
+  color: #7287a3;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
 .summary-card, .timeline-card {
   border: 1px solid #e2e8ef;
   border-radius: 19px;
