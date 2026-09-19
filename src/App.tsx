@@ -196,9 +196,6 @@ function App() {
   };
 
   const startNew = (category = "") => {
-    if (form.mediaPreview.startsWith("blob:")) {
-      URL.revokeObjectURL(form.mediaPreview);
-    }
     setForm({ ...initialForm, category });
     setMediaError("");
     setIsSubmitting(false);
@@ -330,7 +327,9 @@ function App() {
     () => [
       {
         title: "Chamado recebido",
-        text: (calls[0]?.protocol || "MAS-2026-1048") + " entrou na fila de atendimento.",
+        text: calls[0]
+          ? calls[0].protocol + " entrou na fila de atendimento."
+          : "Quando você registrar um chamado, as atualizações aparecerão aqui.",
         time: "Agora"
       },
       {
@@ -651,7 +650,7 @@ function App() {
               <input
                 inputMode="numeric"
                 value={form.cep}
-                placeholder="Ex.: 40000-000"
+                placeholder="Ex.: 20000-000"
                 onChange={(e) => setForm({ ...form, cep: e.target.value })}
               />
             </label>
