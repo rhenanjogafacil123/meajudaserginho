@@ -547,6 +547,13 @@ function App() {
     [calls]
   );
 
+  const resolvedNeighborhoodCount = useMemo(
+    () => new Set(resolvedCalls.map((item) => item.neighborhood).filter(Boolean)).size,
+    [resolvedCalls]
+  );
+
+  const latestResolved = resolvedCalls[0];
+
   const similarCalls = useMemo(() => {
     if (!form.category || form.category === "Outro") return [];
 
@@ -741,46 +748,57 @@ function App() {
         </section>
 
         <section className="resolved-home-section">
-          <div className="section-heading">
-            <div>
-              <small>Atendimentos concluídos</small>
-              <h2>Serviços concluídos</h2>
+          <div className="impact-panel">
+            <div className="impact-panel-top">
+              <div>
+                <span className="impact-kicker">Resultados registrados</span>
+                <h2>O que já foi resolvido</h2>
+                <p>Chamados finalizados com local e data registrados no sistema.</p>
+              </div>
+              <span className="impact-seal"><CheckCircle2 size={24} /></span>
             </div>
-            <button type="button" className="text-button" onClick={() => setScreen("resolved")}>
-              Ver todos
+
+            <div className="impact-stats">
+              <div className="impact-stat">
+                <strong>{resolvedCalls.length}</strong>
+                <span>{resolvedCalls.length === 1 ? "serviço concluído" : "serviços concluídos"}</span>
+              </div>
+              <div className="impact-stat">
+                <strong>{resolvedNeighborhoodCount}</strong>
+                <span>{resolvedNeighborhoodCount === 1 ? "bairro com resolução" : "bairros com resolução"}</span>
+              </div>
+            </div>
+
+            {latestResolved ? (
+              <button
+                type="button"
+                className="impact-featured"
+                onClick={() => openCall(latestResolved, "home")}
+              >
+                <div className="impact-featured-media">
+                  <CallThumbnail item={latestResolved} />
+                  <span><Check size={12} /> Concluído</span>
+                </div>
+                <div className="impact-featured-body">
+                  <small>Conclusão mais recente</small>
+                  <strong>{latestResolved.category}</strong>
+                  <span>{latestResolved.address}</span>
+                  <em>{latestResolved.neighborhood} · {latestResolved.date}</em>
+                </div>
+                <ChevronRight size={18} />
+              </button>
+            ) : (
+              <div className="resolved-empty impact-empty">
+                <CheckCircle2 size={23} />
+                <strong>Nenhum serviço concluído registrado ainda</strong>
+                <span>Quando um chamado for finalizado, ele aparecerá aqui.</span>
+              </div>
+            )}
+
+            <button type="button" className="impact-history-button" onClick={() => setScreen("resolved")}>
+              Ver histórico completo <ChevronRight size={17} />
             </button>
           </div>
-
-          <p className="resolved-section-copy">
-            Consulte chamados que já foram marcados como resolvidos no sistema.
-          </p>
-
-          {resolvedCalls.length === 0 ? (
-            <div className="resolved-empty">
-              <CheckCircle2 size={23} />
-              <strong>Nenhum serviço concluído registrado ainda</strong>
-              <span>Quando um chamado for finalizado, ele aparecerá aqui.</span>
-            </div>
-          ) : (
-            <div className="resolved-preview-grid">
-              {resolvedCalls.slice(0, 3).map((item) => (
-                <button
-                  type="button"
-                  className="resolved-preview-card"
-                  key={item.id}
-                  onClick={() => openCall(item, "home")}
-                >
-                  <CallThumbnail item={item} />
-                  <div>
-                    <strong>{item.category}</strong>
-                    <span>{item.neighborhood}</span>
-                    <small>{item.address}</small>
-                  </div>
-                  <span className="resolved-check"><Check size={14} /></span>
-                </button>
-              ))}
-            </div>
-          )}
         </section>
 
         <section>
@@ -1220,12 +1238,21 @@ function App() {
     <>
       {renderHeader("Serviços concluídos", () => setScreen("home"))}
       <main className="content">
-        <div className="page-intro">
+        <div className="resolved-page-hero">
           <span className="eyebrow">Histórico público</span>
-          <h1 className="page-title">Problemas resolvidos</h1>
-          <p className="page-subtitle">
-            Esta área reúne chamados marcados como resolvidos, com local e data registrados no sistema.
-          </p>
+          <h1>Resultados registrados</h1>
+          <p>Chamados concluídos com local, data e situação registrados no sistema.</p>
+
+          <div className="resolved-page-stats">
+            <div>
+              <strong>{resolvedCalls.length}</strong>
+              <span>concluídos</span>
+            </div>
+            <div>
+              <strong>{resolvedNeighborhoodCount}</strong>
+              <span>bairros</span>
+            </div>
+          </div>
         </div>
 
         {resolvedCalls.length === 0 ? (
