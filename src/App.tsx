@@ -122,7 +122,7 @@ const seedCalls: CallItem[] = [
     neighborhood: "Centro",
     city: "Rio de Janeiro",
     state: "RJ",
-    requesterName: "Mônica",
+    requesterName: "Mônica Silva",
     description: "Buraco aumentando próximo à faixa de pedestres.",
     status: "Em análise",
     date: "18/09/2026"
@@ -135,7 +135,7 @@ const seedCalls: CallItem[] = [
     neighborhood: "Tijuca",
     city: "Rio de Janeiro",
     state: "RJ",
-    requesterName: "José",
+    requesterName: "José Santos",
     description: "Poste sem iluminação há alguns dias.",
     status: "Encaminhado",
     date: "16/09/2026"
@@ -148,7 +148,7 @@ const seedCalls: CallItem[] = [
     neighborhood: "Copacabana",
     city: "Rio de Janeiro",
     state: "RJ",
-    requesterName: "Carla",
+    requesterName: "Carla Souza",
     description: "Entulho acumulado ao lado da calçada.",
     status: "Resolvido",
     date: "12/09/2026"
@@ -161,7 +161,7 @@ const seedCalls: CallItem[] = [
     neighborhood: "Centro",
     city: "Rio de Janeiro",
     state: "RJ",
-    requesterName: "André",
+    requesterName: "André Lima",
     description: "Trecho da rua permanece escuro durante a noite.",
     status: "Recebido",
     date: "18/09/2026"
@@ -174,7 +174,7 @@ const seedCalls: CallItem[] = [
     neighborhood: "Tijuca",
     city: "Rio de Janeiro",
     state: "RJ",
-    requesterName: "Renata",
+    requesterName: "Renata Oliveira",
     description: "Buraco próximo ao meio-fio dificultando a passagem.",
     status: "Em análise",
     date: "17/09/2026"
@@ -381,7 +381,7 @@ function App() {
       state: form.state || undefined,
       cep: form.cep || undefined,
       description: form.description.trim() || "Sem detalhes adicionais.",
-      requesterName: form.requesterName.trim().split(/\s+/)[0] || undefined,
+      requesterName: form.requesterName.trim().replace(/\s+/g, " ") || undefined,
       reference: form.reference.trim() || undefined,
       status: "Recebido",
       date: new Date().toLocaleDateString("pt-BR"),
@@ -929,18 +929,19 @@ function App() {
               <span className="public-name-icon"><MapPin size={17} /></span>
               <div>
                 <strong>Como seu pedido aparecerá no bairro</strong>
-                <span>Mostraremos somente seu primeiro nome para ajudar os moradores a identificar pedidos já existentes.</span>
+                <span>Seu nome e sobrenome ficarão visíveis junto ao chamado para ajudar os moradores a identificar pedidos já existentes.</span>
               </div>
             </div>
 
             <label className="field">
-              <span>Seu primeiro nome</span>
+              <span>Nome e sobrenome</span>
               <input
-                autoComplete="given-name"
+                autoComplete="name"
                 value={form.requesterName}
-                placeholder="Ex.: Mônica"
+                placeholder="Ex.: Mônica Silva"
                 onChange={(e) => setForm({ ...form, requesterName: e.target.value })}
               />
+              <small className="field-help">Informe pelo menos nome e sobrenome.</small>
             </label>
 
             <label className="field">
@@ -980,7 +981,7 @@ function App() {
                 value={[form.neighborhood, form.city, form.state].filter(Boolean).join(" · ") || "Não informado"}
               />
               <SummaryRow label="CEP" value={form.cep || "Não informado"} />
-              <SummaryRow label="Enviado por" value={form.requesterName.trim().split(/\s+/)[0] || "Não informado"} />
+              <SummaryRow label="Enviado por" value={form.requesterName.trim().replace(/\s+/g, " ") || "Não informado"} />
               <SummaryRow label="Mídia" value={form.mediaName || "Sem mídia"} />
             </div>
 
@@ -988,7 +989,10 @@ function App() {
               type="button"
               className="primary full send"
               onClick={submitCall}
-              disabled={isSubmitting || !form.requesterName.trim()}
+              disabled={
+                isSubmitting ||
+                form.requesterName.trim().split(/\s+/).filter(Boolean).length < 2
+              }
             >
               <Send size={19} /> {isSubmitting ? "Enviando..." : "Enviar chamado"}
             </button>
