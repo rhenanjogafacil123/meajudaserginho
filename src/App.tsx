@@ -28,7 +28,7 @@ import {
 import { useMemo, useRef, useState } from "react";
 
 type Status = "Recebido" | "Em análise" | "Encaminhado" | "Resolvido";
-type Screen = "home" | "new" | "calls" | "detail" | "notices" | "success";
+type Screen = "home" | "new" | "calls" | "detail" | "notices" | "resolved" | "success";
 
 type CallItem = {
   id: string;
@@ -316,6 +316,7 @@ function App() {
   const [step, setStep] = useState(1);
   const [calls, setCalls] = useState<CallItem[]>(loadCalls);
   const [selectedCall, setSelectedCall] = useState<CallItem | null>(null);
+  const [detailReturnScreen, setDetailReturnScreen] = useState<Screen>("calls");
   const [form, setForm] = useState<FormState>(initialForm);
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>(loadNeighborhood);
   const [neighborhoodDraft, setNeighborhoodDraft] = useState<string>(loadNeighborhood);
@@ -368,8 +369,9 @@ function App() {
     setScreen("new");
   };
 
-  const openCall = (item: CallItem) => {
+  const openCall = (item: CallItem, returnTo: Screen = "calls") => {
     setSelectedCall(item);
+    setDetailReturnScreen(returnTo);
     setScreen("detail");
   };
 
@@ -535,6 +537,14 @@ function App() {
           selectedNeighborhood.trim().toLocaleLowerCase("pt-BR")
       ),
     [calls, selectedNeighborhood]
+  );
+
+  const resolvedCalls = useMemo(
+    () =>
+      calls
+        .filter((item) => item.status === "Resolvido")
+        .sort((a, b) => b.date.localeCompare(a.date, "pt-BR")),
+    [calls]
   );
 
   const similarCalls = useMemo(() => {
@@ -714,7 +724,7 @@ function App() {
           ) : (
             <div className="community-list">
               {neighborhoodCalls.slice(0, 5).map((item) => (
-                <button type="button" className="community-card" key={item.id} onClick={() => openCall(item)}>
+                <button type="button" className="community-card" key={item.id} onClick={() => openCall(item, "home")}>
                   <CallThumbnail item={item} />
                   <div className="community-card-body">
                     <strong>{item.category}</strong>
@@ -724,6 +734,49 @@ function App() {
                     <small>{item.address}</small>
                   </div>
                   <StatusBadge status={item.status} />
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="resolved-home-section">
+          <div className="section-heading">
+            <div>
+              <small>Atendimentos concluídos</small>
+              <h2>Serviços concluídos</h2>
+            </div>
+            <button type="button" className="text-button" onClick={() => setScreen("resolved")}>
+              Ver todos
+            </button>
+          </div>
+
+          <p className="resolved-section-copy">
+            Consulte chamados que já foram marcados como resolvidos no sistema.
+          </p>
+
+          {resolvedCalls.length === 0 ? (
+            <div className="resolved-empty">
+              <CheckCircle2 size={23} />
+              <strong>Nenhum serviço concluído registrado ainda</strong>
+              <span>Quando um chamado for finalizado, ele aparecerá aqui.</span>
+            </div>
+          ) : (
+            <div className="resolved-preview-grid">
+              {resolvedCalls.slice(0, 3).map((item) => (
+                <button
+                  type="button"
+                  className="resolved-preview-card"
+                  key={item.id}
+                  onClick={() => openCall(item, "home")}
+                >
+                  <CallThumbnail item={item} />
+                  <div>
+                    <strong>{item.category}</strong>
+                    <span>{item.neighborhood}</span>
+                    <small>{item.address}</small>
+                  </div>
+                  <span className="resolved-check"><Check size={14} /></span>
                 </button>
               ))}
             </div>
@@ -740,7 +793,7 @@ function App() {
           </div>
           <div className="stack">
             {calls.slice(0, 2).map((item) => (
-              <button type="button" className="call-card" key={item.id} onClick={() => openCall(item)}>
+              <button type="button" className="call-card" key={item.id} onClick={() => openCall(item, "home")}>
                 <div className="call-main">
                   <CallThumbnail item={item} />
                   <div>
@@ -828,7 +881,7 @@ function App() {
 
                 <div className="similar-reports-list">
                   {similarCalls.slice(0, 3).map((item) => (
-                    <button type="button" key={item.id} onClick={() => openCall(item)}>
+                    <button type="button" key={item.id} onClick={() => openCall(item, "new")}>
                       <div>
                         <strong>{item.category}</strong>
                         <span>{item.address}</span>
@@ -1138,7 +1191,7 @@ function App() {
               </div>
             )}
             {filtered.map((item) => (
-              <button type="button" className="call-card vertical" key={item.id} onClick={() => openCall(item)}>
+              <button type="button" className="call-card vertical" key={item.id} onClick={() => openCall(item, "calls")}>
                 <div className="call-card-top">
                   <div className="call-main">
                     <CallThumbnail item={item} />
@@ -1163,12 +1216,59 @@ function App() {
     );
   };
 
+  const ResolvedScreen = () => (
+    <>
+      {renderHeader("Serviços concluídos", () => setScreen("home"))}
+      <main className="content">
+        <div className="page-intro">
+          <span className="eyebrow">Histórico público</span>
+          <h1 className="page-title">Problemas resolvidos</h1>
+          <p className="page-subtitle">
+            Esta área reúne chamados marcados como resolvidos, com local e data registrados no sistema.
+          </p>
+        </div>
+
+        {resolvedCalls.length === 0 ? (
+          <div className="resolved-empty large">
+            <CheckCircle2 size={28} />
+            <strong>Nenhum chamado resolvido registrado ainda</strong>
+            <span>Os atendimentos concluídos aparecerão aqui automaticamente.</span>
+          </div>
+        ) : (
+          <div className="resolved-wall">
+            {resolvedCalls.map((item) => (
+              <button
+                type="button"
+                className="resolved-wall-card"
+                key={item.id}
+                onClick={() => openCall(item, "resolved")}
+              >
+                <div className="resolved-wall-media">
+                  <CallThumbnail item={item} />
+                  <span className="resolved-badge">
+                    <Check size={12} /> Resolvido
+                  </span>
+                </div>
+                <div className="resolved-wall-body">
+                  <strong>{item.category}</strong>
+                  <span>{item.address}</span>
+                  <small>{item.neighborhood} · {item.date}</small>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </main>
+      <BottomNav />
+    </>
+  );
+
   const DetailScreen = () => {
     if (!selectedCall) return null;
     const currentIndex = statusOrder.indexOf(selectedCall.status);
     return (
       <>
-        {renderHeader("Detalhes do chamado", () => setScreen("calls"))}
+        {renderHeader("Detalhes do chamado", () => setScreen(detailReturnScreen))}
         <main className="content">
           {selectedCall.mediaPreview ? (
             <div className="detail-media">
@@ -1281,7 +1381,7 @@ function App() {
         <small>Seu protocolo</small>
         <strong>{latestProtocol}</strong>
       </div>
-      <button type="button" className="primary full" onClick={() => selectedCall && openCall(selectedCall)}>
+      <button type="button" className="primary full" onClick={() => selectedCall && openCall(selectedCall, "calls")}>
         <ClipboardList size={19} /> Acompanhar chamado
       </button>
       <button type="button" className="secondary full" onClick={() => setScreen("home")}>Voltar ao início</button>
@@ -1300,6 +1400,7 @@ function App() {
         {screen === "calls" && <CallsScreen />}
         {screen === "detail" && <DetailScreen />}
         {screen === "notices" && <NoticesScreen />}
+            {screen === "resolved" && <ResolvedScreen />}
             {screen === "success" && <SuccessScreen />}
           </>
         )}
