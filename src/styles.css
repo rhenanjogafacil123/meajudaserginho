@@ -941,3 +941,11 @@ button:disabled { cursor: not-allowed; opacity: .5; }
   font-size: 9px;
   line-height: 1.45;
 }
+
+
+.field-help {
+  margin-top: -2px;
+  color: #8996a7;
+  font-size: 9px;
+  line-height: 1.4;
+}
