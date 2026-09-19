@@ -163,6 +163,14 @@ const initialForm: FormState = {
 
 const statusOrder: Status[] = ["Recebido", "Em análise", "Encaminhado", "Resolvido"];
 
+function loadNeighborhood() {
+  try {
+    return localStorage.getItem("mas-neighborhood") || "";
+  } catch {
+    return "";
+  }
+}
+
 function loadCalls() {
   try {
     const stored = localStorage.getItem("mas-calls");
@@ -178,12 +186,38 @@ function App() {
   const [calls, setCalls] = useState<CallItem[]>(loadCalls);
   const [selectedCall, setSelectedCall] = useState<CallItem | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
+  const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>(loadNeighborhood);
+  const [neighborhoodDraft, setNeighborhoodDraft] = useState<string>(loadNeighborhood);
+  const [showNeighborhoodPicker, setShowNeighborhoodPicker] = useState(() => !loadNeighborhood());
   const [latestProtocol, setLatestProtocol] = useState("");
   const [mediaError, setMediaError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const galleryInput = useRef<HTMLInputElement>(null);
   const photoInput = useRef<HTMLInputElement>(null);
   const videoInput = useRef<HTMLInputElement>(null);
+
+  const confirmNeighborhood = () => {
+    const neighborhood = neighborhoodDraft.trim();
+    if (!rioNeighborhoods.includes(neighborhood)) return;
+
+    setSelectedNeighborhood(neighborhood);
+    setShowNeighborhoodPicker(false);
+    setForm((current) => ({
+      ...current,
+      neighborhood: current.neighborhood || neighborhood
+    }));
+
+    try {
+      localStorage.setItem("mas-neighborhood", neighborhood);
+    } catch {
+      // A escolha continua válida durante a sessão mesmo sem armazenamento local.
+    }
+  };
+
+  const openNeighborhoodPicker = () => {
+    setNeighborhoodDraft(selectedNeighborhood);
+    setShowNeighborhoodPicker(true);
+  };
 
   const persistCalls = (next: CallItem[]) => {
     setCalls(next);
@@ -196,7 +230,7 @@ function App() {
   };
 
   const startNew = (category = "") => {
-    setForm({ ...initialForm, category });
+    setForm({ ...initialForm, category, neighborhood: selectedNeighborhood });
     setMediaError("");
     setIsSubmitting(false);
     setStep(category && category !== "Outro" ? 2 : 1);
@@ -386,10 +420,84 @@ function App() {
     </nav>
   );
 
+  const NeighborhoodPicker = () => (
+    <main className="neighborhood-screen">
+      <div className="neighborhood-brand">
+        <div className="brand-mark"><MapPin size={22} /></div>
+        <span>Me Ajuda Serginho</span>
+      </div>
+
+      <div className="neighborhood-intro">
+        <span className="eyebrow">Seu bairro</span>
+        <h1>Qual bairro você quer acompanhar?</h1>
+        <p>
+          Escolha um bairro do Rio de Janeiro para deixar o app mais prático para você.
+          Essa escolha será usada como padrão nos novos chamados e pode ser alterada quando quiser.
+        </p>
+      </div>
+
+      <label className="neighborhood-select-card">
+        <span>Selecione o bairro</span>
+        <select
+          value={neighborhoodDraft}
+          onChange={(e) => setNeighborhoodDraft(e.target.value)}
+        >
+          <option value="">Escolha um bairro...</option>
+          {rioNeighborhoods.map((neighborhood) => (
+            <option key={neighborhood} value={neighborhood}>
+              {neighborhood}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <div className="neighborhood-note">
+        <MapPin size={18} />
+        <span>
+          O bairro escolhido aqui não precisa ser o seu endereço residencial. Nos chamados,
+          você sempre poderá informar o bairro exato onde o problema está.
+        </span>
+      </div>
+
+      <button
+        type="button"
+        className="primary full neighborhood-continue"
+        disabled={!rioNeighborhoods.includes(neighborhoodDraft)}
+        onClick={confirmNeighborhood}
+      >
+        Continuar <ChevronRight size={19} />
+      </button>
+
+      {selectedNeighborhood && (
+        <button
+          type="button"
+          className="neighborhood-cancel"
+          onClick={() => {
+            setNeighborhoodDraft(selectedNeighborhood);
+            setShowNeighborhoodPicker(false);
+          }}
+        >
+          Cancelar
+        </button>
+      )}
+    </main>
+  );
+
   const HomeScreen = () => (
     <>
       {renderHeader()}
       <main className="content">
+        {selectedNeighborhood && (
+          <button type="button" className="home-neighborhood" onClick={openNeighborhoodPicker}>
+            <span className="home-neighborhood-icon"><MapPin size={17} /></span>
+            <div>
+              <small>Seu bairro</small>
+              <strong>{selectedNeighborhood}</strong>
+            </div>
+            <span className="home-neighborhood-change">Trocar</span>
+          </button>
+        )}
+
         <section className="hero">
           <span className="eyebrow">Cuidar do bairro começa por aqui</span>
           <h1>Como podemos ajudar seu bairro hoje?</h1>
@@ -920,12 +1028,18 @@ function App() {
   return (
     <div className="app-shell">
       <div className="phone">
-        {screen === "home" && <HomeScreen />}
+        {showNeighborhoodPicker ? (
+          <NeighborhoodPicker />
+        ) : (
+          <>
+            {screen === "home" && <HomeScreen />}
         {screen === "new" && renderNewCallScreen()}
         {screen === "calls" && <CallsScreen />}
         {screen === "detail" && <DetailScreen />}
         {screen === "notices" && <NoticesScreen />}
-        {screen === "success" && <SuccessScreen />}
+            {screen === "success" && <SuccessScreen />}
+          </>
+        )}
       </div>
     </div>
   );
