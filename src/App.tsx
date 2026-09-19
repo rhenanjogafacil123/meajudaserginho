@@ -77,7 +77,7 @@ const categories = [
 
 const rioNeighborhoods = [
   "Abolição", "Acari", "Água Santa", "Alto da Boa Vista", "Anchieta", "Andaraí",
-  "Anil", "Bancários", "Bangu", "Barra da Tijuca", "Barra de Guaratiba",
+  "Anil", "Bancários", "Bangu", "Barra da Tijuca", "Barra de Guaratiba", "Barra Olímpica",
   "Barros Filho", "Benfica", "Bento Ribeiro", "Bonsucesso", "Botafogo",
   "Brás de Pina", "Cachambi", "Cacuia", "Caju", "Camorim", "Campinho",
   "Campo dos Afonsos", "Campo Grande", "Cascadura", "Catete", "Catumbi",
@@ -86,7 +86,7 @@ const rioNeighborhoods = [
   "Cordovil", "Cosme Velho", "Cosmos", "Costa Barros", "Curicica",
   "Del Castilho", "Deodoro", "Encantado", "Engenheiro Leal", "Engenho da Rainha",
   "Engenho de Dentro", "Engenho Novo", "Estácio", "Flamengo",
-  "Freguesia (Ilha)", "Freguesia (Jacarepaguá)", "Galeão", "Gamboa",
+  "Freguesia (Ilha do Governador)", "Freguesia Jacarepaguá", "Galeão", "Gamboa",
   "Gardênia Azul", "Gávea", "Gericinó", "Glória", "Grajaú", "Grumari",
   "Guadalupe", "Guaratiba", "Higienópolis", "Honório Gurgel", "Humaitá",
   "Inhaúma", "Inhoaíba", "Ipanema", "Irajá", "Itanhangá", "Jabour",
@@ -103,9 +103,9 @@ const rioNeighborhoods = [
   "Recreio dos Bandeirantes", "Riachuelo", "Ribeira", "Ricardo de Albuquerque",
   "Rio Comprido", "Rocinha", "Rocha", "Rocha Miranda", "Sampaio",
   "Santa Cruz", "Santa Teresa", "Santíssimo", "Santo Cristo", "São Conrado",
-  "São Cristóvão", "São Francisco Xavier", "Saúde", "Senador Camará",
+  "Imperial de São Cristóvão", "São Francisco Xavier", "Saúde", "Senador Camará",
   "Senador Vasconcelos", "Sepetiba", "Tanque", "Taquara", "Tauá", "Tijuca",
-  "Todos os Santos", "Tomás Coelho", "Turiaçu", "Urca", "Vargem Grande",
+  "Todos os Santos", "Tomás Coelho", "Tubiacanga", "Turiaçu", "Urca", "Vargem Grande",
   "Vargem Pequena", "Vasco da Gama", "Vaz Lobo", "Vicente de Carvalho",
   "Vidigal", "Vigário Geral", "Vila da Penha", "Vila Isabel", "Vila Kennedy",
   "Vila Kosmos", "Vila Militar", "Vila Valqueire", "Vista Alegre", "Zumbi"
