@@ -42,7 +42,9 @@ type CallItem = {
   mediaName?: string;
   mediaType?: string;
   mediaPreview?: string;
-  coordinates?: { lat: number; lng: number };
+  city?: string;
+  state?: string;
+  cep?: string;
 };
 
 type FormState = {
@@ -60,7 +62,6 @@ type FormState = {
   mediaName: string;
   mediaType: string;
   mediaPreview: string;
-  coordinates?: { lat: number; lng: number };
 };
 
 const categories = [
@@ -151,8 +152,8 @@ const initialForm: FormState = {
   complement: "",
   neighborhood: "",
   cep: "",
-  city: "",
-  state: "",
+  city: "Rio de Janeiro",
+  state: "RJ",
   description: "",
   reference: "",
   mediaName: "",
@@ -178,17 +179,29 @@ function App() {
   const [selectedCall, setSelectedCall] = useState<CallItem | null>(null);
   const [form, setForm] = useState<FormState>(initialForm);
   const [latestProtocol, setLatestProtocol] = useState("");
+  const [mediaError, setMediaError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const galleryInput = useRef<HTMLInputElement>(null);
   const photoInput = useRef<HTMLInputElement>(null);
   const videoInput = useRef<HTMLInputElement>(null);
 
   const persistCalls = (next: CallItem[]) => {
     setCalls(next);
-    localStorage.setItem("mas-calls", JSON.stringify(next));
+    try {
+      const safeForStorage = next.map(({ mediaPreview, ...item }) => item);
+      localStorage.setItem("mas-calls", JSON.stringify(safeForStorage));
+    } catch {
+      // O protótipo continua funcionando na sessão mesmo se o armazenamento local estiver cheio.
+    }
   };
 
   const startNew = (category = "") => {
+    if (form.mediaPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(form.mediaPreview);
+    }
     setForm({ ...initialForm, category });
+    setMediaError("");
+    setIsSubmitting(false);
     setStep(category && category !== "Outro" ? 2 : 1);
     setScreen("new");
   };
@@ -198,34 +211,91 @@ function App() {
     setScreen("detail");
   };
 
+  const clearSelectedMedia = () => {
+    setForm((current) => {
+      if (current.mediaPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(current.mediaPreview);
+      }
+      return {
+        ...current,
+        mediaName: "",
+        mediaType: "",
+        mediaPreview: ""
+      };
+    });
+    setMediaError("");
+    if (photoInput.current) photoInput.current.value = "";
+    if (videoInput.current) videoInput.current.value = "";
+    if (galleryInput.current) galleryInput.current.value = "";
+  };
+
   const handleFile = (file?: File) => {
     if (!file) return;
+
     const isImage = file.type.startsWith("image/");
-    const reader = new FileReader();
-    reader.onload = () => {
-      setForm((current) => ({
-        ...current,
-        mediaName: file.name,
-        mediaType: file.type,
-        mediaPreview: typeof reader.result === "string" ? reader.result : ""
-      }));
-    };
-    if (isImage && file.size <= 2_000_000) {
-      reader.readAsDataURL(file);
-    } else {
-      const url = URL.createObjectURL(file);
-      setForm((current) => ({
-        ...current,
-        mediaName: file.name,
-        mediaType: file.type,
-        mediaPreview: url
-      }));
+    const isVideo = file.type.startsWith("video/");
+
+    if (!isImage && !isVideo) {
+      setMediaError("Escolha uma foto ou um vídeo válido.");
+      return;
     }
+
+    const maxSize = isImage ? 12_000_000 : 100_000_000;
+    if (file.size > maxSize) {
+      setMediaError(
+        isImage
+          ? "Essa foto está muito grande. Escolha uma imagem de até 12 MB."
+          : "Esse vídeo está muito grande. Escolha um vídeo de até 100 MB."
+      );
+      return;
+    }
+
+    setMediaError("");
+
+    setForm((current) => {
+      if (current.mediaPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(current.mediaPreview);
+      }
+      return current;
+    });
+
+    if (isImage && file.size <= 1_500_000) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setForm((current) => ({
+          ...current,
+          mediaName: file.name,
+          mediaType: file.type,
+          mediaPreview: typeof reader.result === "string" ? reader.result : ""
+        }));
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    const url = URL.createObjectURL(file);
+    setForm((current) => ({
+      ...current,
+      mediaName: file.name,
+      mediaType: file.type,
+      mediaPreview: url
+    }));
   };
 
   const submitCall = () => {
-    const random = String(Math.floor(1000 + Math.random() * 8999));
-    const protocol = "MAS-2026-" + random;
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+
+    const year = new Date().getFullYear();
+    let suffix = Number(String(Date.now()).slice(-6));
+    let protocol = `MAS-${year}-${String(suffix).padStart(6, "0")}`;
+
+    while (calls.some((item) => item.protocol === protocol)) {
+      suffix += 1;
+      protocol = `MAS-${year}-${String(suffix).padStart(6, "0")}`;
+    }
+
     const item: CallItem = {
       id: String(Date.now()),
       protocol,
@@ -236,21 +306,20 @@ function App() {
         [form.address, form.number && "nº " + form.number, form.complement]
           .filter(Boolean)
           .join(", ") ||
-        "Localização informada pelo celular",
-      neighborhood:
-        [form.neighborhood, form.city, form.state, form.cep]
-          .filter(Boolean)
-          .join(" · ") ||
-        "Bairro não informado",
-      description: form.description || "Sem detalhes adicionais.",
-      reference: form.reference,
+        "Endereço não informado",
+      neighborhood: form.neighborhood || "Bairro não informado",
+      city: form.city || undefined,
+      state: form.state || undefined,
+      cep: form.cep || undefined,
+      description: form.description.trim() || "Sem detalhes adicionais.",
+      reference: form.reference.trim() || undefined,
       status: "Recebido",
       date: new Date().toLocaleDateString("pt-BR"),
-      mediaName: form.mediaName,
-      mediaType: form.mediaType,
-      mediaPreview: form.mediaType.startsWith("image/") ? form.mediaPreview : undefined,
-      coordinates: form.coordinates
+      mediaName: form.mediaName || undefined,
+      mediaType: form.mediaType || undefined,
+      mediaPreview: form.mediaPreview || undefined
     };
+
     persistCalls([item, ...calls]);
     setSelectedCall(item);
     setLatestProtocol(protocol);
@@ -477,7 +546,7 @@ function App() {
                 ) : (
                   <img src={form.mediaPreview} alt="Prévia selecionada" />
                 )}
-                <button type="button" className="remove-media" onClick={() => setForm({ ...form, mediaName: "", mediaType: "", mediaPreview: "" })}>
+                <button type="button" className="remove-media" onClick={clearSelectedMedia} aria-label="Remover mídia">
                   <X size={18} />
                 </button>
                 <div className="media-caption">
@@ -493,14 +562,16 @@ function App() {
               </div>
             )}
 
+            {mediaError && <div className="media-error">{mediaError}</div>}
+
             <div className="media-actions">
               <button type="button" onClick={() => photoInput.current?.click()}><Camera size={19} /> Tirar foto</button>
               <button type="button" onClick={() => videoInput.current?.click()}><Video size={19} /> Gravar vídeo</button>
               <button type="button" onClick={() => galleryInput.current?.click()}><Upload size={19} /> Escolher da galeria</button>
             </div>
-            <input ref={photoInput} hidden type="file" accept="image/*" capture="environment" onChange={(e) => handleFile(e.target.files?.[0])} />
-            <input ref={videoInput} hidden type="file" accept="video/*" capture="environment" onChange={(e) => handleFile(e.target.files?.[0])} />
-            <input ref={galleryInput} hidden type="file" accept="image/*,video/*" onChange={(e) => handleFile(e.target.files?.[0])} />
+            <input ref={photoInput} hidden type="file" accept="image/*" capture="environment" onChange={(e) => { handleFile(e.target.files?.[0]); e.currentTarget.value = ""; }} />
+            <input ref={videoInput} hidden type="file" accept="video/*" capture="environment" onChange={(e) => { handleFile(e.target.files?.[0]); e.currentTarget.value = ""; }} />
+            <input ref={galleryInput} hidden type="file" accept="image/*,video/*" onChange={(e) => { handleFile(e.target.files?.[0]); e.currentTarget.value = ""; }} />
 
             <button type="button" className="primary full" onClick={() => setStep(3)}>
               Continuar <ChevronRight size={19} />
@@ -589,7 +660,7 @@ function App() {
               <span>Cidade</span>
               <input
                 value={form.city}
-                placeholder="Ex.: Salvador"
+                placeholder="Ex.: Rio de Janeiro"
                 onChange={(e) => setForm({ ...form, city: e.target.value })}
               />
             </label>
@@ -599,7 +670,7 @@ function App() {
               <input
                 maxLength={2}
                 value={form.state}
-                placeholder="Ex.: BA"
+                placeholder="Ex.: RJ"
                 onChange={(e) => setForm({ ...form, state: e.target.value.toUpperCase() })}
               />
             </label>
@@ -654,7 +725,7 @@ function App() {
                 value={
                   [form.address, form.number && "nº " + form.number, form.complement]
                     .filter(Boolean)
-                    .join(", ") || "Localização do celular"
+                    .join(", ") || "Endereço não informado"
                 }
               />
               <SummaryRow
@@ -665,8 +736,8 @@ function App() {
               <SummaryRow label="Mídia" value={form.mediaName || "Sem mídia"} />
             </div>
 
-            <button type="button" className="primary full send" onClick={submitCall}>
-              <Send size={19} /> Enviar chamado
+            <button type="button" className="primary full send" onClick={submitCall} disabled={isSubmitting}>
+              <Send size={19} /> {isSubmitting ? "Enviando..." : "Enviar chamado"}
             </button>
           </section>
         )}
@@ -694,6 +765,13 @@ function App() {
             ))}
           </div>
           <div className="stack">
+            {filtered.length === 0 && (
+              <div className="empty-state">
+                <ClipboardList size={24} />
+                <strong>Nenhum chamado por aqui</strong>
+                <span>Não há solicitações com esse status no momento.</span>
+              </div>
+            )}
             {filtered.map((item) => (
               <button type="button" className="call-card vertical" key={item.id} onClick={() => openCall(item)}>
                 <div className="call-card-top">
@@ -727,9 +805,23 @@ function App() {
       <>
         {renderHeader("Detalhes do chamado", () => setScreen("calls"))}
         <main className="content">
-          {selectedCall.mediaPreview && (
-            <div className="detail-media"><img src={selectedCall.mediaPreview} alt="Registro da ocorrência" /></div>
-          )}
+          {selectedCall.mediaPreview ? (
+            <div className="detail-media">
+              {selectedCall.mediaType?.startsWith("video/") ? (
+                <video src={selectedCall.mediaPreview} controls playsInline />
+              ) : (
+                <img src={selectedCall.mediaPreview} alt="Registro da ocorrência" />
+              )}
+            </div>
+          ) : selectedCall.mediaName ? (
+            <div className="media-saved-note">
+              <FileImage size={18} />
+              <div>
+                <strong>Mídia registrada</strong>
+                <span>{selectedCall.mediaName}</span>
+              </div>
+            </div>
+          ) : null}
           <div className="detail-header">
             <div>
               <span className="protocol">{selectedCall.protocol}</span>
@@ -739,8 +831,20 @@ function App() {
           </div>
 
           <div className="detail-info">
-            <InfoLine icon={<MapPin size={18} />} label="Local" value={selectedCall.address + " · " + selectedCall.neighborhood} />
+            <InfoLine
+              icon={<MapPin size={18} />}
+              label="Local"
+              value={[
+                selectedCall.address,
+                selectedCall.neighborhood,
+                [selectedCall.city, selectedCall.state].filter(Boolean).join(" - "),
+                selectedCall.cep
+              ].filter(Boolean).join(" · ")}
+            />
             <InfoLine icon={<MessageSquareText size={18} />} label="Descrição" value={selectedCall.description} />
+            {selectedCall.reference && (
+              <InfoLine icon={<MapPin size={18} />} label="Ponto de referência" value={selectedCall.reference} />
+            )}
           </div>
 
           <section className="timeline-card">
