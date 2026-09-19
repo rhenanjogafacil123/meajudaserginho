@@ -36,6 +36,7 @@ type CallItem = {
   address: string;
   neighborhood: string;
   description: string;
+  requesterName?: string;
   reference?: string;
   status: Status;
   date: string;
@@ -58,6 +59,7 @@ type FormState = {
   city: string;
   state: string;
   description: string;
+  requesterName: string;
   reference: string;
   mediaName: string;
   mediaType: string;
@@ -116,8 +118,11 @@ const seedCalls: CallItem[] = [
     id: "seed-1",
     protocol: "MAS-2026-1038",
     category: "Buraco na rua",
-    address: "Rua das Palmeiras, 82",
+    address: "Rua do Lavradio, 82",
     neighborhood: "Centro",
+    city: "Rio de Janeiro",
+    state: "RJ",
+    requesterName: "Mônica",
     description: "Buraco aumentando próximo à faixa de pedestres.",
     status: "Em análise",
     date: "18/09/2026"
@@ -126,8 +131,11 @@ const seedCalls: CallItem[] = [
     id: "seed-2",
     protocol: "MAS-2026-1021",
     category: "Iluminação",
-    address: "Av. Central, 310",
-    neighborhood: "Jardim Novo",
+    address: "Rua Conde de Bonfim, 310",
+    neighborhood: "Tijuca",
+    city: "Rio de Janeiro",
+    state: "RJ",
+    requesterName: "José",
     description: "Poste sem iluminação há alguns dias.",
     status: "Encaminhado",
     date: "16/09/2026"
@@ -136,11 +144,40 @@ const seedCalls: CallItem[] = [
     id: "seed-3",
     protocol: "MAS-2026-0994",
     category: "Lixo/Entulho",
-    address: "Rua do Sol, 14",
-    neighborhood: "Boa Vista",
+    address: "Rua Barata Ribeiro, 214",
+    neighborhood: "Copacabana",
+    city: "Rio de Janeiro",
+    state: "RJ",
+    requesterName: "Carla",
     description: "Entulho acumulado ao lado da calçada.",
     status: "Resolvido",
     date: "12/09/2026"
+  },
+  {
+    id: "seed-4",
+    protocol: "MAS-2026-1052",
+    category: "Iluminação",
+    address: "Rua do Riachuelo, 156",
+    neighborhood: "Centro",
+    city: "Rio de Janeiro",
+    state: "RJ",
+    requesterName: "André",
+    description: "Trecho da rua permanece escuro durante a noite.",
+    status: "Recebido",
+    date: "18/09/2026"
+  },
+  {
+    id: "seed-5",
+    protocol: "MAS-2026-1044",
+    category: "Buraco na rua",
+    address: "Rua Uruguai, 441",
+    neighborhood: "Tijuca",
+    city: "Rio de Janeiro",
+    state: "RJ",
+    requesterName: "Renata",
+    description: "Buraco próximo ao meio-fio dificultando a passagem.",
+    status: "Em análise",
+    date: "17/09/2026"
   }
 ];
 
@@ -155,6 +192,7 @@ const initialForm: FormState = {
   city: "Rio de Janeiro",
   state: "RJ",
   description: "",
+  requesterName: "",
   reference: "",
   mediaName: "",
   mediaType: "",
@@ -343,6 +381,7 @@ function App() {
       state: form.state || undefined,
       cep: form.cep || undefined,
       description: form.description.trim() || "Sem detalhes adicionais.",
+      requesterName: form.requesterName.trim().split(/\s+/)[0] || undefined,
       reference: form.reference.trim() || undefined,
       status: "Recebido",
       date: new Date().toLocaleDateString("pt-BR"),
@@ -379,6 +418,28 @@ function App() {
     ],
     [calls]
   );
+
+  const neighborhoodCalls = useMemo(
+    () =>
+      calls.filter(
+        (item) =>
+          item.neighborhood.trim().toLocaleLowerCase("pt-BR") ===
+          selectedNeighborhood.trim().toLocaleLowerCase("pt-BR")
+      ),
+    [calls, selectedNeighborhood]
+  );
+
+  const similarCalls = useMemo(() => {
+    if (!form.category || form.category === "Outro") return [];
+
+    return calls.filter(
+      (item) =>
+        item.category === form.category &&
+        item.neighborhood.trim().toLocaleLowerCase("pt-BR") ===
+          (form.neighborhood || selectedNeighborhood).trim().toLocaleLowerCase("pt-BR") &&
+        item.status !== "Resolvido"
+    );
+  }, [calls, form.category, form.neighborhood, selectedNeighborhood]);
 
   const renderHeader = (title?: string, back?: () => void) => (
     <header className="topbar">
@@ -528,6 +589,42 @@ function App() {
         <section>
           <div className="section-heading">
             <div>
+              <small>Comunidade</small>
+              <h2>Pedidos neste bairro</h2>
+            </div>
+            <span className="community-count">
+              {neighborhoodCalls.length} {neighborhoodCalls.length === 1 ? "pedido" : "pedidos"}
+            </span>
+          </div>
+
+          {neighborhoodCalls.length === 0 ? (
+            <div className="community-empty">
+              <MapPin size={22} />
+              <strong>Ainda não há pedidos neste bairro</strong>
+              <span>Quando alguém registrar um problema aqui, ele aparecerá nesta área.</span>
+            </div>
+          ) : (
+            <div className="community-list">
+              {neighborhoodCalls.slice(0, 5).map((item) => (
+                <button type="button" className="community-card" key={item.id} onClick={() => openCall(item)}>
+                  <span className="community-card-icon"><CircleDot size={17} /></span>
+                  <div className="community-card-body">
+                    <strong>{item.category}</strong>
+                    <span className="community-author">
+                      Enviado por {item.requesterName || "Morador(a)"}
+                    </span>
+                    <small>{item.address}</small>
+                  </div>
+                  <StatusBadge status={item.status} />
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section>
+          <div className="section-heading">
+            <div>
               <small>Acompanhamento</small>
               <h2>Seus últimos chamados</h2>
             </div>
@@ -608,6 +705,31 @@ function App() {
                 <p className="other-problem-help">
                   Escreva em poucas palavras para a equipe identificar corretamente o tipo de ocorrência.
                 </p>
+              </div>
+            )}
+
+            {similarCalls.length > 0 && (
+              <div className="similar-reports">
+                <div className="similar-reports-heading">
+                  <span className="similar-reports-icon"><ClipboardList size={18} /></span>
+                  <div>
+                    <strong>Já existe {similarCalls.length === 1 ? "um pedido parecido" : "pedidos parecidos"} neste bairro</strong>
+                    <span>Confira antes de registrar outro chamado para o mesmo problema.</span>
+                  </div>
+                </div>
+
+                <div className="similar-reports-list">
+                  {similarCalls.slice(0, 3).map((item) => (
+                    <button type="button" key={item.id} onClick={() => openCall(item)}>
+                      <div>
+                        <strong>{item.category}</strong>
+                        <span>{item.address}</span>
+                        <small>Enviado por {item.requesterName || "Morador(a)"}</small>
+                      </div>
+                      <ChevronRight size={17} />
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -803,6 +925,24 @@ function App() {
             <h1 className="page-title">Conte mais detalhes</h1>
             <p className="page-subtitle">Descreva o que está acontecendo para facilitar a análise.</p>
 
+            <div className="public-name-note">
+              <span className="public-name-icon"><MapPin size={17} /></span>
+              <div>
+                <strong>Como seu pedido aparecerá no bairro</strong>
+                <span>Mostraremos somente seu primeiro nome para ajudar os moradores a identificar pedidos já existentes.</span>
+              </div>
+            </div>
+
+            <label className="field">
+              <span>Seu primeiro nome</span>
+              <input
+                autoComplete="given-name"
+                value={form.requesterName}
+                placeholder="Ex.: Mônica"
+                onChange={(e) => setForm({ ...form, requesterName: e.target.value })}
+              />
+            </label>
+
             <label className="field">
               <span>Descrição</span>
               <textarea
@@ -840,10 +980,16 @@ function App() {
                 value={[form.neighborhood, form.city, form.state].filter(Boolean).join(" · ") || "Não informado"}
               />
               <SummaryRow label="CEP" value={form.cep || "Não informado"} />
+              <SummaryRow label="Enviado por" value={form.requesterName.trim().split(/\s+/)[0] || "Não informado"} />
               <SummaryRow label="Mídia" value={form.mediaName || "Sem mídia"} />
             </div>
 
-            <button type="button" className="primary full send" onClick={submitCall} disabled={isSubmitting}>
+            <button
+              type="button"
+              className="primary full send"
+              onClick={submitCall}
+              disabled={isSubmitting || !form.requesterName.trim()}
+            >
               <Send size={19} /> {isSubmitting ? "Enviando..." : "Enviar chamado"}
             </button>
           </section>
@@ -947,6 +1093,11 @@ function App() {
                 [selectedCall.city, selectedCall.state].filter(Boolean).join(" - "),
                 selectedCall.cep
               ].filter(Boolean).join(" · ")}
+            />
+            <InfoLine
+              icon={<MessageSquareText size={18} />}
+              label="Enviado por"
+              value={selectedCall.requesterName || "Morador(a)"}
             />
             <InfoLine icon={<MessageSquareText size={18} />} label="Descrição" value={selectedCall.description} />
             {selectedCall.reference && (
