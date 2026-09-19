@@ -176,9 +176,53 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .call-main { display: flex; gap: 11px; min-width: 0; }
 .call-main > div { display: flex; flex-direction: column; min-width: 0; }
 .call-main strong { font-size: 13px; margin-bottom: 4px; }
-.call-main span { color: #6f7d91; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 190px; }
+.call-main > div > span { color: #6f7d91; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 190px; }
 .call-main small { margin-top: 6px; color: #9aa5b3; font-size: 10px; }
 .call-icon { width: 35px; height: 35px; border-radius: 12px; background: #edf4ff; color: #0b5ed7; display: grid; place-items: center; flex: 0 0 auto; }
+
+.call-thumbnail {
+  width: 48px;
+  height: 48px;
+  border-radius: 13px;
+  overflow: hidden;
+  position: relative;
+  flex: 0 0 48px;
+  display: block;
+  background: #edf2f7;
+  border: 1px solid #e1e7ee;
+}
+
+.call-thumbnail img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.call-thumbnail-play {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(15,23,42,.82);
+  color: white;
+  box-shadow: 0 2px 8px rgba(15,23,42,.22);
+}
+
+.community-card .call-thumbnail {
+  width: 44px;
+  height: 44px;
+  flex-basis: 44px;
+  border-radius: 12px;
+}
+
+.call-main {
+  align-items: center;
+}
 .call-side { display: flex; align-items: center; gap: 7px; color: #99a5b5; }
 
 .status {
