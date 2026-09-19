@@ -324,6 +324,7 @@ function App() {
   const [latestProtocol, setLatestProtocol] = useState("");
   const [mediaError, setMediaError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showMoreNeighborhoodCalls, setShowMoreNeighborhoodCalls] = useState(false);
   const galleryInput = useRef<HTMLInputElement>(null);
   const photoInput = useRef<HTMLInputElement>(null);
   const videoInput = useRef<HTMLInputElement>(null);
@@ -553,6 +554,7 @@ function App() {
   );
 
   const latestResolved = resolvedCalls[0];
+  const activeCallCount = calls.filter((item) => item.status !== "Resolvido").length;
 
   const similarCalls = useMemo(() => {
     if (!form.category || form.category === "Outro") return [];
@@ -672,50 +674,35 @@ function App() {
   const HomeScreen = () => (
     <>
       {renderHeader()}
-      <main className="content">
+      <main className="content home-content">
         {selectedNeighborhood && (
           <button type="button" className="home-neighborhood" onClick={openNeighborhoodPicker}>
             <span className="home-neighborhood-icon"><MapPin size={17} /></span>
             <div>
-              <small>Seu bairro</small>
+              <small>Bairro acompanhado</small>
               <strong>{selectedNeighborhood}</strong>
             </div>
             <span className="home-neighborhood-change">Trocar</span>
           </button>
         )}
 
-        <section className="hero">
-          <span className="eyebrow">Cuidar do bairro começa por aqui</span>
-          <h1>Como podemos ajudar seu bairro hoje?</h1>
-          <p>Registre um problema em poucos passos e acompanhe o andamento pelo protocolo.</p>
-          <button type="button" className="primary hero-action" onClick={() => startNew()}>
-            <Camera size={20} />
-            Registrar um problema
+        <section className="home-primary-action">
+          <div className="home-primary-copy">
+            <span className="eyebrow">Novo chamado</span>
+            <h1>Encontrou um problema no bairro?</h1>
+            <p>Envie o local, uma foto ou vídeo e acompanhe o andamento.</p>
+          </div>
+          <button type="button" className="primary home-primary-button" onClick={() => startNew()}>
+            <Camera size={19} />
+            Registrar problema
           </button>
         </section>
 
-        <section>
-          <div className="section-heading">
-            <div>
-              <small>Atalhos</small>
-              <h2>O que você encontrou?</h2>
-            </div>
-          </div>
-          <div className="category-grid">
-            {categories.map(({ label, icon: Icon }) => (
-              <button type="button" key={label} className="category-card" onClick={() => startNew(label)}>
-                <span className="category-icon"><Icon size={21} /></span>
-                <span>{label}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section>
-          <div className="section-heading">
+        <section className="home-section">
+          <div className="section-heading home-section-heading">
             <div>
               <small>Comunidade</small>
-              <h2>Pedidos neste bairro</h2>
+              <h2>Acontecendo em {selectedNeighborhood || "seu bairro"}</h2>
             </div>
             <span className="community-count">
               {neighborhoodCalls.length} {neighborhoodCalls.length === 1 ? "pedido" : "pedidos"}
@@ -729,22 +716,69 @@ function App() {
               <span>Quando alguém registrar um problema aqui, ele aparecerá nesta área.</span>
             </div>
           ) : (
-            <div className="community-list">
-              {neighborhoodCalls.slice(0, 5).map((item) => (
-                <button type="button" className="community-card" key={item.id} onClick={() => openCall(item, "home")}>
-                  <CallThumbnail item={item} />
-                  <div className="community-card-body">
-                    <strong>{item.category}</strong>
-                    <span className="community-author">
-                      Enviado por {item.requesterName || "Morador(a)"}
-                    </span>
-                    <small>{item.address}</small>
-                  </div>
-                  <StatusBadge status={item.status} />
+            <>
+              <div className="community-list">
+                {neighborhoodCalls
+                  .slice(0, showMoreNeighborhoodCalls ? 8 : 3)
+                  .map((item) => (
+                    <button
+                      type="button"
+                      className="community-card"
+                      key={item.id}
+                      onClick={() => openCall(item, "home")}
+                    >
+                      <CallThumbnail item={item} />
+                      <div className="community-card-body">
+                        <strong>{item.category}</strong>
+                        <span className="community-author">
+                          Enviado por {item.requesterName || "Morador(a)"}
+                        </span>
+                        <small>{item.address}</small>
+                      </div>
+                      <StatusBadge status={item.status} />
+                    </button>
+                  ))}
+              </div>
+
+              {neighborhoodCalls.length > 3 && (
+                <button
+                  type="button"
+                  className="home-inline-action"
+                  onClick={() => setShowMoreNeighborhoodCalls((current) => !current)}
+                >
+                  {showMoreNeighborhoodCalls ? "Mostrar menos" : "Ver mais pedidos"}
+                  <ChevronRight size={16} />
                 </button>
-              ))}
-            </div>
+              )}
+            </>
           )}
+        </section>
+
+        <section className="home-section">
+          <div className="section-heading home-section-heading">
+            <div>
+              <small>Atalhos</small>
+              <h2>O que você encontrou?</h2>
+            </div>
+          </div>
+
+          <div className="home-category-grid">
+            {categories.slice(0, 4).map(({ label, icon: Icon }) => (
+              <button
+                type="button"
+                key={label}
+                className="home-category-card"
+                onClick={() => startNew(label)}
+              >
+                <span className="home-category-icon"><Icon size={19} /></span>
+                <span>{label.replace(" na rua", "")}</span>
+              </button>
+            ))}
+            <button type="button" className="home-category-card" onClick={() => startNew()}>
+              <span className="home-category-icon"><Menu size={19} /></span>
+              <span>Mais</span>
+            </button>
+          </div>
         </section>
 
         <section className="resolved-home-section">
@@ -801,15 +835,27 @@ function App() {
           </div>
         </section>
 
-        <section>
-          <div className="section-heading">
+        <section className="home-section home-my-calls">
+          <div className="section-heading home-section-heading">
             <div>
               <small>Acompanhamento</small>
-              <h2>Seus últimos chamados</h2>
+              <h2>Seus chamados</h2>
             </div>
             <button type="button" className="text-button" onClick={() => setScreen("calls")}>Ver todos</button>
           </div>
-          <div className="stack">
+
+          <div className="my-calls-summary">
+            <div>
+              <strong>{activeCallCount}</strong>
+              <span>em andamento</span>
+            </div>
+            <div>
+              <strong>{resolvedCalls.length}</strong>
+              <span>resolvidos</span>
+            </div>
+          </div>
+
+          <div className="stack home-call-stack">
             {calls.slice(0, 2).map((item) => (
               <button type="button" className="call-card" key={item.id} onClick={() => openCall(item, "home")}>
                 <div className="call-main">
