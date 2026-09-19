@@ -16,6 +16,7 @@ import {
   MessageSquareText,
   Navigation,
   Plus,
+  Play,
   Route,
   Send,
   Trash2,
@@ -43,6 +44,7 @@ type CallItem = {
   mediaName?: string;
   mediaType?: string;
   mediaPreview?: string;
+  mediaThumbnail?: string;
   city?: string;
   state?: string;
   cep?: string;
@@ -64,6 +66,7 @@ type FormState = {
   mediaName: string;
   mediaType: string;
   mediaPreview: string;
+  mediaThumbnail: string;
 };
 
 const categories = [
@@ -196,7 +199,8 @@ const initialForm: FormState = {
   reference: "",
   mediaName: "",
   mediaType: "",
-  mediaPreview: ""
+  mediaPreview: "",
+  mediaThumbnail: ""
 };
 
 const statusOrder: Status[] = ["Recebido", "Em análise", "Encaminhado", "Resolvido"];
@@ -212,10 +216,99 @@ function loadNeighborhood() {
 function loadCalls() {
   try {
     const stored = localStorage.getItem("mas-calls");
-    return stored ? (JSON.parse(stored) as CallItem[]) : seedCalls;
+    if (!stored) return seedCalls;
+
+    return (JSON.parse(stored) as CallItem[]).map((item) => ({
+      ...item,
+      address:
+        item.address === "Localização informada pelo celular"
+          ? "Endereço não informado"
+          : item.address
+    }));
   } catch {
     return seedCalls;
   }
+}
+
+function makeImageThumbnail(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        resolve("");
+        return;
+      }
+
+      const image = new Image();
+      image.onload = () => {
+        const size = 180;
+        const scale = Math.min(size / image.width, size / image.height, 1);
+        const width = Math.max(1, Math.round(image.width * scale));
+        const height = Math.max(1, Math.round(image.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const context = canvas.getContext("2d");
+        if (!context) {
+          resolve("");
+          return;
+        }
+
+        context.drawImage(image, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", 0.68));
+      };
+      image.onerror = () => resolve("");
+      image.src = reader.result;
+    };
+
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(file);
+  });
+}
+
+function makeVideoThumbnail(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    const url = URL.createObjectURL(file);
+    let finished = false;
+
+    const finish = (value = "") => {
+      if (finished) return;
+      finished = true;
+      URL.revokeObjectURL(url);
+      resolve(value);
+    };
+
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "metadata";
+
+    video.onloadeddata = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        const max = 180;
+        const scale = Math.min(max / video.videoWidth, max / video.videoHeight, 1);
+        canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+        canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+
+        const context = canvas.getContext("2d");
+        if (!context) {
+          finish();
+          return;
+        }
+
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        finish(canvas.toDataURL("image/jpeg", 0.65));
+      } catch {
+        finish();
+      }
+    };
+
+    video.onerror = () => finish();
+    video.src = url;
+  });
 }
 
 function App() {
@@ -289,7 +382,8 @@ function App() {
         ...current,
         mediaName: "",
         mediaType: "",
-        mediaPreview: ""
+        mediaPreview: "",
+        mediaThumbnail: ""
       };
     });
     setMediaError("");
@@ -321,6 +415,17 @@ function App() {
 
     setMediaError("");
 
+    const thumbnailPromise = isImage ? makeImageThumbnail(file) : makeVideoThumbnail(file);
+    thumbnailPromise.then((thumbnail) => {
+      if (!thumbnail) return;
+
+      setForm((current) =>
+        current.mediaName === file.name && current.mediaType === file.type
+          ? { ...current, mediaThumbnail: thumbnail }
+          : current
+      );
+    });
+
     setForm((current) => {
       if (current.mediaPreview.startsWith("blob:")) {
         URL.revokeObjectURL(current.mediaPreview);
@@ -335,7 +440,8 @@ function App() {
           ...current,
           mediaName: file.name,
           mediaType: file.type,
-          mediaPreview: typeof reader.result === "string" ? reader.result : ""
+          mediaPreview: typeof reader.result === "string" ? reader.result : "",
+          mediaThumbnail: ""
         }));
       };
       reader.readAsDataURL(file);
@@ -347,7 +453,8 @@ function App() {
       ...current,
       mediaName: file.name,
       mediaType: file.type,
-      mediaPreview: url
+      mediaPreview: url,
+      mediaThumbnail: ""
     }));
   };
 
@@ -387,7 +494,8 @@ function App() {
       date: new Date().toLocaleDateString("pt-BR"),
       mediaName: form.mediaName || undefined,
       mediaType: form.mediaType || undefined,
-      mediaPreview: form.mediaPreview || undefined
+      mediaPreview: form.mediaPreview || undefined,
+      mediaThumbnail: form.mediaThumbnail || undefined
     };
 
     persistCalls([item, ...calls]);
@@ -607,7 +715,7 @@ function App() {
             <div className="community-list">
               {neighborhoodCalls.slice(0, 5).map((item) => (
                 <button type="button" className="community-card" key={item.id} onClick={() => openCall(item)}>
-                  <span className="community-card-icon"><CircleDot size={17} /></span>
+                  <CallThumbnail item={item} />
                   <div className="community-card-body">
                     <strong>{item.category}</strong>
                     <span className="community-author">
@@ -634,7 +742,7 @@ function App() {
             {calls.slice(0, 2).map((item) => (
               <button type="button" className="call-card" key={item.id} onClick={() => openCall(item)}>
                 <div className="call-main">
-                  <span className="call-icon"><CircleDot size={18} /></span>
+                  <CallThumbnail item={item} />
                   <div>
                     <strong>{item.category}</strong>
                     <span>{item.address}</span>
@@ -1033,7 +1141,7 @@ function App() {
               <button type="button" className="call-card vertical" key={item.id} onClick={() => openCall(item)}>
                 <div className="call-card-top">
                   <div className="call-main">
-                    <span className="call-icon"><CircleDot size={18} /></span>
+                    <CallThumbnail item={item} />
                     <div>
                       <strong>{item.category}</strong>
                       <span>{item.address}</span>
@@ -1197,6 +1305,29 @@ function App() {
         )}
       </div>
     </div>
+  );
+}
+
+function CallThumbnail({ item }: { item: CallItem }) {
+  const thumbnail = item.mediaThumbnail || (
+    item.mediaType?.startsWith("image/") ? item.mediaPreview : undefined
+  );
+
+  if (!thumbnail) {
+    return <span className="call-icon"><CircleDot size={18} /></span>;
+  }
+
+  const isVideo = item.mediaType?.startsWith("video/");
+
+  return (
+    <span className="call-thumbnail">
+      <img src={thumbnail} alt="" />
+      {isVideo && (
+        <span className="call-thumbnail-play" aria-hidden="true">
+          <Play size={11} fill="currentColor" />
+        </span>
+      )}
+    </span>
   );
 }
 
