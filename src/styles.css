@@ -309,40 +309,6 @@ button:disabled { cursor: not-allowed; opacity: .5; }
   font-size: 12px;
 }
 
-.location-button {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  text-align: left;
-  border: 1px solid #dce5f0;
-  background: #fff;
-  border-radius: 18px;
-  padding: 14px;
-  color: #0b5ed7;
-  margin: 18px 0 9px;
-}
-.location-button > div { flex: 1; display: flex; flex-direction: column; }
-.location-button strong { color: #203a5b; font-size: 13px; }
-.location-button span { color: #8491a3; font-size: 10px; margin-top: 3px; }
-
-.location-message, .coordinates {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  border-radius: 13px;
-  padding: 10px 12px;
-  background: #f5f7fa;
-  color: #6b7789;
-  font-size: 11px;
-  margin-bottom: 9px;
-}
-.location-message.success { background: #eaf8f0; color: #26774c; }
-.coordinates { background: #f1f6ff; color: #2d5b9c; }
-.coordinates div { display: flex; flex-direction: column; }
-.coordinates strong { font-size: 11px; }
-.coordinates span { font-size: 10px; margin-top: 2px; }
-
 .divider { display: flex; align-items: center; gap: 10px; color: #a0a9b6; font-size: 10px; margin: 19px 0 14px; }
 .divider::before, .divider::after { content: ""; height: 1px; flex: 1; background: #e2e7ed; }
 
@@ -597,4 +563,162 @@ button:disabled { cursor: not-allowed; opacity: .5; }
   font-size: 10px;
   line-height: 1.5;
   color: #6d8099;
+}
+
+
+.neighborhood-screen {
+  min-height: 100vh;
+  padding: calc(34px + env(safe-area-inset-top)) 20px 30px;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(11,94,215,.10), transparent 28%),
+    #f7f9fc;
+}
+
+.neighborhood-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #203a5a;
+  font-weight: 850;
+  font-size: 14px;
+}
+
+.neighborhood-brand .brand-mark {
+  width: 42px;
+  height: 42px;
+}
+
+.neighborhood-intro {
+  margin-top: 44px;
+}
+
+.neighborhood-intro h1 {
+  margin: 8px 0 10px;
+  font-size: 29px;
+  line-height: 1.08;
+  letter-spacing: -.75px;
+  color: #172f50;
+}
+
+.neighborhood-intro p {
+  margin: 0;
+  color: #718197;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.neighborhood-select-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 28px;
+}
+
+.neighborhood-select-card > span {
+  font-size: 11px;
+  font-weight: 800;
+  color: #445772;
+}
+
+.neighborhood-select-card select {
+  width: 100%;
+  min-height: 54px;
+  border: 1px solid #dce4ee;
+  border-radius: 16px;
+  padding: 0 14px;
+  background: white;
+  color: #213a5a;
+  font-size: 14px;
+  outline: none;
+}
+
+.neighborhood-select-card select:focus {
+  border-color: #0b5ed7;
+  box-shadow: 0 0 0 3px rgba(11,94,215,.08);
+}
+
+.neighborhood-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 15px;
+  padding: 13px;
+  border-radius: 15px;
+  background: #f0f6ff;
+  border: 1px solid #dce9fb;
+  color: #6b7f99;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.neighborhood-note svg {
+  flex: 0 0 auto;
+  color: #0b5ed7;
+  margin-top: 1px;
+}
+
+.neighborhood-continue {
+  margin-top: auto;
+}
+
+.neighborhood-cancel {
+  border: 0;
+  background: none;
+  color: #738197;
+  font-size: 11px;
+  font-weight: 750;
+  padding: 13px 0 0;
+}
+
+.home-neighborhood {
+  width: 100%;
+  border: 1px solid #dce7f3;
+  background: #f4f8fe;
+  border-radius: 16px;
+  padding: 11px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  color: #24486f;
+}
+
+.home-neighborhood-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: white;
+  color: #0b5ed7;
+  flex: 0 0 auto;
+}
+
+.home-neighborhood div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.home-neighborhood small {
+  color: #7b8ca1;
+  font-size: 9px;
+}
+
+.home-neighborhood strong {
+  font-size: 12px;
+  color: #27496e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-neighborhood-change {
+  margin-left: auto;
+  color: #0b5ed7;
+  font-size: 10px;
+  font-weight: 800;
 }
